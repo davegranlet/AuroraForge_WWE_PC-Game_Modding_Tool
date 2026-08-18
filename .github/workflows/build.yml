@@ -1,0 +1,73 @@
+name: Verify and build Aurora Forge
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify source (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Verify Windows DDS conversion
+        if: runner.os == 'Windows'
+        run: npm run verify:dds
+      - name: Verify Windows CAK extraction
+        if: runner.os == 'Windows'
+        run: npm run verify:cak
+
+  windows-package:
+    name: Build Windows x64
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:portable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aurora-Forge-Windows-x64
+          path: |
+            portable-release/AF-160m-x64.zip
+            portable-release/AF-160m-x64.zip.sha256.txt
+          if-no-files-found: error
+
+  linux-package:
+    name: Build Linux x64
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aurora-Forge-Linux-x64
+          path: |
+            portable-release/AF-160m-Linux-x64.tar.gz
+            portable-release/AF-160m-Linux-x64.tar.gz.sha256.txt
+          if-no-files-found: error

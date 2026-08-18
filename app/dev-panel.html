@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>Aurora Forge — Dev Panel</title>
+<link rel="stylesheet" href="assets/css/style.css?v=20260724-r161">
+</head>
+<body class="desktop-studio-shell">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="app-brand">
+      <div class="app-mark app-mark-logo"><img src="assets/img/aurora-forge-mark.png" alt="Aurora Forge logo"></div>
+      <div><div class="app-brand-title">Aurora Forge</div><div class="app-brand-sub">by VikingStudios</div></div>
+    </div>
+    <nav class="app-side-nav" aria-label="Development panel navigation">
+      <a class="app-nav-link" href="about.html"><span class="nav-ico">←</span><span><strong>Back to About</strong><small>Leave Dev panel</small></span></a>
+      <a class="app-nav-link" href="index.html"><span class="nav-ico">⌂</span><span><strong>Home</strong><small>Normal app</small></span></a>
+      <a class="app-nav-link active" href="dev-panel.html"><span class="nav-ico">⚒</span><span><strong>(Dev) Panel</strong><small>Internal notes</small></span></a>
+    </nav>
+    <div class="app-sidebar-card"><div class="mini-label">Private area</div><strong>Build notes</strong><span>Normal users can ignore this page.</span></div>
+  </aside>
+  <main class="app-main">
+    <section class="app-topbar">
+      <div>
+        <div class="eyebrow">Aurora Forge · Internal</div>
+        <h1>(Dev) Panel</h1>
+        <p class="sub">Release records, research reminders, media requests, and implementation boundaries.</p>
+      </div>
+      <div class="topbar-badges"><span class="version-badge">v1.6.0.m</span><span class="app-runtime-badge">Development only</span></div>
+    </section>
+    <div class="wrap app-wrap">
+      <div class="dev-panel-banner"><strong>This page is not part of the normal user workflow.</strong> Keep temporary wording, future ideas, research questions, and visual-production requests here.</div>
+
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Release identity</div>
+        <div class="dev-note-grid">
+          <div class="workflow-mini-card"><strong>Current package</strong><span>Aurora Forge v1.6.0.m · Prompt Builder Edition</span></div>
+          <div class="workflow-mini-card"><strong>Normal release</strong><span>Portable Windows x64 ZIP with Electron included.</span></div>
+          <div class="workflow-mini-card"><strong>User-facing rule</strong><span>No beta, experimental, foundation, roadmap, TODO, or old release badges on normal pages.</span></div>
+          <div class="workflow-mini-card"><strong>Tutorial rule</strong><span>One job per lesson. Short words. One action per numbered step. Every lesson includes a stop check.</span></div>
+        </div>
+      </section>
+
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Pictures to make later</div>
+        <div class="dev-note-grid">
+          <div class="workflow-mini-card"><strong>Setup</strong><span>Show the Projects folder, Exports folder, and External Programs path buttons with green check results.</span></div>
+          <div class="workflow-mini-card"><strong>Project safety</strong><span>Show one folder containing Originals, Work, Ready, and Screenshots.</span></div>
+          <div class="workflow-mini-card"><strong>Face texture</strong><span>Show stock layout, correct generated square texture, and a wrong portrait example.</span></div>
+          <div class="workflow-mini-card"><strong>Luchador mask</strong><span>Show color, mask1, and normal files together, plus front/side/back in-game checks.</span></div>
+          <div class="workflow-mini-card"><strong>File chain</strong><span>Make a simple YCL → MCD → MTLS/JMTL → DDS diagram.</span></div>
+          <div class="workflow-mini-card"><strong>Inspector</strong><span>Show Original and Modified folder selection and a small changed-files result.</span></div>
+          <div class="workflow-mini-card"><strong>Character Viewer</strong><span>Show OBJ selection, texture slots, original/replacement switch, and four camera angles.</span></div>
+          <div class="workflow-mini-card"><strong>Troubleshooting</strong><span>Make four cards: missing, black, stretched, and too shiny.</span></div>
+        </div>
+      </section>
+
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Videos to make later</div>
+        <div class="dev-note-grid">
+          <div class="workflow-mini-card"><strong>New character</strong><span>60–90 seconds: create project, fill identity, open matching studios, download handoff, test one part.</span></div>
+          <div class="workflow-mini-card"><strong>Face calibration</strong><span>30–45 seconds: screenshot, name one problem, make one correction, compare.</span></div>
+          <div class="workflow-mini-card"><strong>Luchador mask</strong><span>45–60 seconds: pick profile, choose details, build pack, show three required outputs.</span></div>
+          <div class="workflow-mini-card"><strong>CakeView</strong><span>Use real current footage: find item, extract, back up, replace one matching DDS, build, test.</span></div>
+          <div class="workflow-mini-card"><strong>Tribute</strong><span>Use real current footage. Show the exact build/version and avoid steps that change between releases.</span></div>
+          <div class="workflow-mini-card"><strong>Arena</strong><span>45–60 seconds: surface list, shared branding, safe areas, four camera checks.</span></div>
+        </div>
+      </section>
+
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Research and implementation reminders</div>
+        <ul class="setup-list">
+          <li>Keep Character Viewer read-only. Never bundle extracted game assets.</li>
+          <li>Document JMTL and MTLS behavior only from permitted samples and repeatable observations.</li>
+          <li>Add attire and hair auto-classification only after several exports follow the same rules.</li>
+          <li>Evaluate a locally packaged, license-compatible DDS preview path before promising direct DDS viewing.</li>
+          <li>Add external-tool automation only when the tool has verified command-line behavior.</li>
+          <li>Recheck version-sensitive tutorials after WWE 2K26, CakeView, CakeHook, Tribute, or related tools change.</li>
+        </ul>
+      </section>
+
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Component record</div>
+        <div class="dev-note-grid">
+          <div class="workflow-mini-card"><strong>Electron</strong><span>43.2.0</span></div>
+          <div class="workflow-mini-card"><strong>Electron Packager</strong><span>20.0.4</span></div>
+          <div class="workflow-mini-card"><strong>Three.js</strong><span>0.185.1 · MIT License</span></div>
+          <div class="workflow-mini-card"><strong>Security</strong><span>Context isolation, renderer sandbox, no Node integration, local packaged content.</span></div>
+        </div>
+      </section>
+
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Archive catalog record</div>
+        <div class="dev-note-grid">
+          <div class="workflow-mini-card"><strong>Confirmed path entries</strong><span>167,381 hash-to-path matches.</span></div>
+          <div class="workflow-mini-card"><strong>Readable WWE 2K26 files</strong><span>117,450 across the 15 installed archive catalogs used for verification.</span></div>
+          <div class="workflow-mini-card"><strong>Supplied layout audit</strong><span>Both supplied roots contain the same 298,011 files and 55,735 folders; both include WWE 2K25 staging build 1131 metadata.</span></div>
+          <div class="workflow-mini-card"><strong>Matched archive hashes</strong><span>135,552 WWE 2K26 target hashes matched with zero cross-generation path conflicts.</span></div>
+          <div class="workflow-mini-card"><strong>Release rule</strong><span>Path discovery is developer-only. Normal users receive the updated catalog with Aurora Forge and never scan extraction trees.</span></div>
+          <div class="workflow-mini-card"><strong>Cross-generation method</strong><span>Only older-game paths whose hashes occur in WWE 2K26 catalogs were accepted.</span></div>
+          <div class="workflow-mini-card"><strong>Parser boundary</strong><span>Game Archive Explorer opens the verified WWE 2K26 CAK generation only. WWE 2K25 files are naming references, not archive inputs.</span></div>
+        </div>
+      </section>
+    </div>
+    <footer class="app-footer">Aurora Forge · VikingStudios · Internal development panel</footer>
+  </main>
+</div>
+<script src="assets/js/app-config-loader.js?v=20260724-r161"></script>
+</body>
+</html>
+
