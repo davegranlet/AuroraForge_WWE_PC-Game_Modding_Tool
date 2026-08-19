@@ -1,6 +1,6 @@
 param(
   [string]$AppFolder = "dist\Aurora Forge-win32-x64",
-  [string]$ZipName = "AF-160m-x64.zip"
+  [string]$ZipName = "AF-160-RC1-Windows-x64.zip"
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,7 +42,7 @@ Recommended workflow:
 5. Use Tutorials for short lessons, animated videos, troubleshooting, and advanced reference downloads.
 6. Take the exported prompt to your chosen compatible AI, then validate the resulting files in CakeView and in game.
 
-Version: 1.6.0.m
+Version: 1.6.0 RC1
 Edition: Prompt Builder Edition
 
 Aurora Forge prepares instructions and supporting files. It is not an AI chatbot

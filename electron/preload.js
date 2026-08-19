@@ -28,4 +28,6 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,chooseCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-choose-output')
    ,extractCakEntries: (payload) => ipcRenderer.invoke('desktop:cak-explorer-extract', payload)
   ,openCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-open-output')
+  ,chooseRepackSource: () => ipcRenderer.invoke('desktop:repackager-choose-source')
+  ,buildRepackPackage: (sourceRoot) => ipcRenderer.invoke('desktop:repackager-build', sourceRoot)
 });

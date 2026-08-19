@@ -132,7 +132,7 @@
 
   function collect() {
     var c = config();
-    var data = { app:'Aurora Forge', version:'1.6.0.m', workflow:c.workflow, saved_at:new Date().toISOString(), fields:{} };
+    var data = { app:'Aurora Forge', version:'1.6.0 RC1', workflow:c.workflow, saved_at:new Date().toISOString(), fields:{} };
     c.fields.forEach(function(id){ data.fields[id]=value(id); });
     data.outputs = c.outputs;
     return data;

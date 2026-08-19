@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const api = window.WWE2K26Desktop;
-  const state = { archivePath: '', outputPath: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set() };
+  const state = { archivePath: '', outputPath: '', repackSource: '', page: 0, pages: 1, pageSize: 100, query: '', type: '', scope: 'resolved', items: [], selected: new Set() };
   const byId = (id) => document.getElementById(id);
   const formatBytes = (value) => {
     let bytes = Number(value) || 0;
@@ -106,5 +106,7 @@
   byId('cakChooseOutput').addEventListener('click', async () => { try { const result = await api.chooseCakOutput(); if (!result.ok) return; state.outputPath = result.path; byId('cakOutputPath').textContent = result.path; updateSelected(); } catch (error) { message('cakExtractMessage', error.message, 'bad'); } });
   byId('cakExtract').addEventListener('click', async () => { const count = state.selected.size; if (!count || !state.outputPath) return; if (!window.confirm(`Extract ${count} selected file(s) into the separate output folder?\n\nThe CAK will not be changed.`)) return; byId('cakExtract').disabled = true; message('cakExtractMessage', 'Extracting and checking files. Large files can take a little while...', 'working'); try { const result = await api.extractCakEntries({ ids: [...state.selected], outputRoot: state.outputPath, overwrite: byId('cakOverwrite').checked }); message('cakExtractMessage', `${result.succeeded} succeeded; ${result.failed} failed. An extraction report was saved with the files.`, result.failed ? 'bad' : 'good'); byId('cakOpenOutput').disabled = false; } catch (error) { message('cakExtractMessage', error.message, 'bad'); } finally { updateSelected(); } });
   byId('cakOpenOutput').addEventListener('click', async () => { try { await api.openCakOutput(); } catch (error) { message('cakExtractMessage', error.message, 'bad'); } });
+  byId('repackChooseSource').addEventListener('click', async () => { try { const result = await api.chooseRepackSource(); if (!result.ok) return; state.repackSource = result.path; byId('repackSourcePath').textContent = result.path; byId('repackBuild').disabled = false; message('repackMessage', 'Project folder ready to package.', 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } });
+  byId('repackBuild').addEventListener('click', async () => { if (!state.repackSource) return; const button = byId('repackBuild'); button.disabled = true; message('repackMessage', 'Building and verifying the package...', 'working'); try { const result = await api.buildRepackPackage(state.repackSource); if (!result.ok) return; message('repackMessage', `Verified package created with ${result.fileCount.toLocaleString()} project file(s): ${result.outputPath}`, 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } finally { button.disabled = false; } });
   initialize();
 }());

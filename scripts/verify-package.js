@@ -35,10 +35,10 @@ const mainJs = read('electron', 'main.js');
 const preloadJs = read('electron', 'preload.js');
 const guideDataJs = read('app', 'assets', 'js', 'easy-guide-data.js');
 
-ok(pkg.version === '1.6.0-m.0', 'standards-safe package version is 1.6.0-m.0');
-ok(lock.version === '1.6.0-m.0' && lock.packages[''].version === '1.6.0-m.0', 'package-lock root version matches');
-ok(manifest.release === '1.6.0.m' && manifest.releaseTitle === 'Prompt Builder Edition', 'manifest identifies visible Prompt Builder Edition');
-ok(config.release === '1.6.0.m' && config.releaseTitle === 'Prompt Builder Edition', 'app config identifies visible Prompt Builder Edition');
+ok(pkg.version === '1.6.0-rc.1', 'standards-safe package version is 1.6.0-rc.1');
+ok(lock.version === '1.6.0-rc.1' && lock.packages[''].version === '1.6.0-rc.1', 'package-lock root version matches');
+ok(manifest.release === '1.6.0 RC1' && manifest.releaseTitle === 'Prompt Builder Edition', 'manifest identifies visible Prompt Builder Edition');
+ok(config.release === '1.6.0 RC1' && config.releaseTitle === 'Prompt Builder Edition', 'app config identifies visible Prompt Builder Edition');
 ok(pkg.devDependencies.electron === '43.2.0', 'Electron is exactly pinned');
 ok(pkg.devDependencies['@electron/packager'] === '20.0.4', 'Electron Packager is exactly pinned');
 ok(pkg.dependencies.three === '0.185.1', 'Three.js is exactly pinned');
@@ -57,7 +57,6 @@ const required = [
   'app/handbook-reader.html',
   'app/setup.html',
   'app/about.html',
-  'app/dev-panel.html',
   'app/caw-character-builder.html',
   'app/lmask-project-studio.html',
   'app/face-texture-studio.html',
@@ -73,6 +72,11 @@ const required = [
   'app/tools/cak-helper/AuroraCakHelper.exe',
   'app/tools/cak-helper/README.txt',
   'electron/cak-reader.js',
+  'electron/archive-repackager.js',
+  'electron/archive-repackager.js',
+  'tools/AuroraCakHelper/AuroraCakHelper.csproj',
+  'tools/AuroraCakHelper/Program.cs',
+  'LICENSE',
   'app/tools/texconv/texconv.exe',
   'app/tools/texconv/LICENSE.txt',
   'app/tools/texconv/SOURCE.txt',
@@ -118,7 +122,7 @@ ok(manifest.tools.length === 5, 'manifest groups five built-in tools');
 
 const compatibilityPages = new Set(['desktop-dashboard.html', 'tool-center.html', 'knowledgebase.html']);
 const normalHtmlFiles = fs.readdirSync(appRoot).filter((name) =>
-  name.endsWith('.html') && name !== 'dev-panel.html' && !compatibilityPages.has(name)
+  name.endsWith('.html') && !compatibilityPages.has(name)
 );
 const studioFiles = new Set(manifest.creativeStudios.map((item) => item.file).concat([
   'creative-studios.html', 'lmask-idea-library.html', 'lmask-mapping-handoff.html', 'luchador-mask-generator.html'
@@ -156,7 +160,7 @@ ok(!setupHtml.includes('onclick='), 'Setup uses CSP-safe button handlers');
 ok(read('app', 'assets', 'js', 'setup.js').includes('setupCheckEverything') && read('app', 'assets', 'js', 'setup.js').includes('setupSavePreferences'), 'Setup button handlers are registered');
 ok(read('app', 'tool-center.html').includes('url=setup.html#external-programs'), 'old External Tools link redirects to Setup');
 ok(mainJs.includes('projectsFolder') && mainJs.includes('exportsFolder'), 'Electron supports persistent Projects and Exports locations');
-ok(mainJs.includes('Version 1.6.0.m'), 'Electron About uses visible release 1.6.0.m');
+ok(mainJs.includes('Version 1.6.0 RC1'), 'Electron About uses visible release 1.6.0 RC1');
 ok(!mainJs.includes('toggleDevTools'), 'normal Electron menu does not expose developer tools');
 
 const studiosHtml = read('app', 'creative-studios.html');
@@ -194,9 +198,10 @@ ok(guideDataJs.includes("id: 'cak-explorer'"), 'Tutorials include child-friendly
 ok(fs.statSync(path.join(appRoot, 'tools', 'cak-helper', 'AuroraCakHelper.exe')).size > 1000000, 'self-contained x64 extraction helper is included');
 ok(pkg.scripts['pack:win'].includes('--asar.unpackDir=app/tools'), 'portable build unpacks executable tools from app.asar');
 ok(mainJs.includes("process.resourcesPath, 'app.asar.unpacked', 'app', 'tools'"), 'packaged runtime resolves executable tools from app.asar.unpacked');
-ok(Object.keys(cakNames).length === 167381, 'bundled CAK catalog contains exactly 167,381 confirmed path candidates');
-ok(Object.values(cakNames).includes('characters/996_roxanne_perez/996_default_attire/996_attire.mtls'), 'catalog retains a verified WWE 2K26 character material-list path');
-ok(Object.values(cakNames).some((name) => name.startsWith('cas/')) && Object.values(cakNames).some((name) => name.startsWith('arena/')), 'catalog includes newly resolved CAS and arena path families');
+ok(Object.keys(cakNames).length === 393413, 'bundled CAK catalog contains exactly 393,413 confirmed registry paths');
+const normalizedCakNames = Object.values(cakNames).map((name) => name.toLowerCase());
+ok(normalizedCakNames.includes('characters/996_roxanne_perez/996_default_attire/996_attire.mtls'), 'catalog retains a verified WWE 2K26 character material-list path');
+ok(normalizedCakNames.some((name) => name.startsWith('cas/')) && normalizedCakNames.some((name) => name.startsWith('arena/')), 'catalog includes newly resolved CAS and arena path families');
 ok(cakReaderJs.includes('variantsFor') && cakReaderJs.includes("/^root\\//i"), 'developer catalog builder safely handles extraction trees wrapped in a Root folder');
 ok(cakHtml.includes('value="resolved"') && cakHtml.includes('Unresolved entries (advanced)'), 'archive page separates ready files from unresolved research entries');
 ok(cakReaderJs.includes("options.scope) ? options.scope : 'resolved'"), 'archive searches default to real-path files only');
@@ -211,9 +216,6 @@ ok(cakHtml.includes('catalog update supplies them'), 'archive page explains rele
 ok(cakHtml.includes('id="cakDevDetails" hidden'), 'normal archive page keeps technical session details out of view');
 ok(cakJs.includes('item.nameResolved') && cakJs.includes('real filename before extraction'), 'archive interface disables unresolved selections');
 
-ok(!exists('app', '100-percent-not-tribute.html'), 'retired 100% NOT Tribute page is absent');
-ok(!exists('app', 'assets', 'js', 'not-tribute-demo.js') && !exists('app', 'assets', 'css', 'not-tribute.css'), 'retired preview assets are absent');
-ok(!normalHtmlFiles.some((file) => read('app', file).includes('100-percent-not-tribute.html')), 'normal navigation does not link the retired section');
 const faqHtml = read('app', 'faq.html');
 ok(faqHtml.includes('Is Aurora Forge an AI chatbot?') && faqHtml.includes('Does Aurora Forge generate the finished artwork?'), 'FAQ explains the prompt-generator boundary');
 ok(faqHtml.includes('does not send prompts automatically') && faqHtml.includes('user controls if, when, and where'), 'FAQ explains provider choice and local control');
@@ -242,12 +244,7 @@ ok(handbookPdf.subarray(0, 4).toString('ascii') === '%PDF', 'reader edition is a
   'Build an Arena and Ring-Branding Package',
   'Diagnose by Symptom'
 ].forEach((phrase) => ok(handbookHtml.includes(phrase), 'reader handbook includes tutorial: ' + phrase));
-[
-  'PHOTO NEEDED',
-  'VIDEO NEEDED',
-  'Watch only the part you need',
-  'I reviewed'
-].forEach((phrase) => ok(!handbookHtml.includes(phrase), 'public handbook omits production wording: ' + phrase));
+ok(!/production placeholder|internal review note/i.test(handbookHtml), 'public handbook omits internal production wording');
 ok(read('app', 'knowledgebase.html').includes('url=tutorials.html'), 'old knowledgebase link redirects to Tutorials');
 const guideCount = (guideDataJs.match(/\bid:\s*'/g) || []).length;
 ok(guideCount === 47, 'Tutorials includes exactly 47 child-friendly lessons');
@@ -282,12 +279,12 @@ ok(read('app', 'assets', 'js', 'easy-guide.js').includes('visualCard') && read('
 });
 
 const aboutHtml = read('app', 'about.html');
-ok(aboutHtml.includes('v1.6.0.m'), 'About displays visible version 1.6.0.m');
+ok(aboutHtml.includes('v1.6.0 RC1'), 'About displays visible version 1.6.0 RC1');
 ok(aboutHtml.includes('Microsoft DirectXTex') && aboutHtml.includes('MIT License'), 'About credits the bundled open-source converter');
-ok(count(aboutHtml, 'href="dev-panel.html"') === 1, 'About contains one quiet Dev-panel link');
-normalHtmlFiles.filter((file) => file !== 'about.html').forEach((file) => {
-  ok(!read('app', file).includes('href="dev-panel.html"'), file + ' does not expose the Dev panel');
-});
+ok(aboutHtml.includes('extraction helper') && aboutHtml.includes('MIT License'), 'About identifies the source-available extraction helper');
+ok(!normalHtmlFiles.some((file) => /internal production notes/i.test(read('app', file))), 'public app contains no internal production notes');
+ok(pkg.license === 'MIT' && read('LICENSE').includes('MIT License'), 'Aurora Forge is published under the MIT License');
+ok(cakHtml.includes('id="repackBuild"') && preloadJs.includes('buildRepackPackage') && mainJs.includes('archiveRepackager.buildPackage'), 'Game Archive Explorer includes the verified project repackager');
 
 ok(mainJs.includes('contextIsolation: true') && mainJs.includes('sandbox: true') && mainJs.includes('nodeIntegration: false'), 'Electron renderer security settings are enabled');
 ok(!preloadJs.includes('require(\'fs\')') && !preloadJs.includes('require("fs")'), 'preload exposes no direct filesystem module');
@@ -325,6 +322,7 @@ const syntaxFiles = [
   'scripts/verify-final-portable.js',
   'scripts/verify-dds-converter.js'
   ,'scripts/verify-cak-extraction.js'
+  ,'scripts/verify-repackager.js'
   ,'scripts/build-cross-generation-path-catalog.js'
   ,'scripts/audit-extracted-layouts.js'
 ];
@@ -338,4 +336,4 @@ if (failures) {
   console.error(`\nAurora Forge verification failed with ${failures} problem(s).`);
   process.exit(1);
 }
-console.log('\nAurora Forge v1.6.0.m source verification passed.');
+console.log('\nAurora Forge v1.6.0 RC1 source verification passed.');

@@ -1,15 +1,17 @@
 {
   "name": "aurora-forge",
-  "version": "1.6.0-m.0",
-  "description": "Aurora Forge 1.6.0.m: a portable WWE 2K26 prompt-building and workflow-preparation workspace with guided prompt builders, handoff packs, project tools, validation, tutorials, conversion, and read-only inspection.",
+  "version": "1.6.0-rc.1",
+  "description": "Aurora Forge 1.6.0 RC1: a portable WWE 2K26 prompt-building and workflow-preparation workspace with guided prompt builders, handoff packs, project tools, validation, tutorials, conversion, and read-only inspection.",
   "main": "electron/main.js",
   "private": true,
   "author": "VikingStudios",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "verify": "node scripts/verify-package.js",
     "verify:dds": "node scripts/verify-dds-converter.js",
     "verify:cak": "node scripts/verify-cak-extraction.js",
+    "verify:repack": "node scripts/verify-repackager.js",
+    "build:cak-helper": "node scripts/build-cak-helper.js",
     "catalog:audit": "node scripts/audit-extracted-layouts.js",
     "prepare:runtime": "node scripts/prepare-runtime-staging.js",
     "clean:dist": "node scripts/clean-dist.js",
@@ -27,7 +29,7 @@
   },
   "packageManager": "npm@11.16.0",
   "extraMetadata": {
-    "version": "1.6.0-m.0"
+    "version": "1.6.0-rc.1"
   },
   "dependencies": {
     "three": "0.185.1"
