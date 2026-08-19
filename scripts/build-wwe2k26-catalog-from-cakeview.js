@@ -21,8 +21,10 @@ const folderHashes = new Set();
 const archiveCounts = [];
 for (const archiveName of archives) {
   const archive = openArchive(path.join(gameFolder, archiveName), {});
-  for (const file of archive.files) fileHashes.add(file.hash);
-  for (const folder of archive.folders) folderHashes.add(folder.hash);
+  // Some CAK tables contain zero-byte placeholder records without a hash.
+  // They are not addressable files and must not reduce real-path coverage.
+  for (const file of archive.files) if (file.hash) fileHashes.add(file.hash);
+  for (const folder of archive.folders) if (folder.hash) folderHashes.add(folder.hash);
   archiveCounts.push({ archive: archiveName, files: archive.files.length, folders: archive.folders.length });
 }
 

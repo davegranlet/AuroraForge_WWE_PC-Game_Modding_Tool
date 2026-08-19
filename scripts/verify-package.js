@@ -194,9 +194,10 @@ ok(guideDataJs.includes("id: 'cak-explorer'"), 'Tutorials include child-friendly
 ok(fs.statSync(path.join(appRoot, 'tools', 'cak-helper', 'AuroraCakHelper.exe')).size > 1000000, 'self-contained x64 extraction helper is included');
 ok(pkg.scripts['pack:win'].includes('--asar.unpackDir=app/tools'), 'portable build unpacks executable tools from app.asar');
 ok(mainJs.includes("process.resourcesPath, 'app.asar.unpacked', 'app', 'tools'"), 'packaged runtime resolves executable tools from app.asar.unpacked');
-ok(Object.keys(cakNames).length === 167381, 'bundled CAK catalog contains exactly 167,381 confirmed path candidates');
-ok(Object.values(cakNames).includes('characters/996_roxanne_perez/996_default_attire/996_attire.mtls'), 'catalog retains a verified WWE 2K26 character material-list path');
-ok(Object.values(cakNames).some((name) => name.startsWith('cas/')) && Object.values(cakNames).some((name) => name.startsWith('arena/')), 'catalog includes newly resolved CAS and arena path families');
+ok(Object.keys(cakNames).length === 393413, 'bundled CAK catalog contains exactly 393,413 confirmed registry paths');
+const normalizedCakNames = Object.values(cakNames).map((name) => name.toLowerCase());
+ok(normalizedCakNames.includes('characters/996_roxanne_perez/996_default_attire/996_attire.mtls'), 'catalog retains a verified WWE 2K26 character material-list path');
+ok(normalizedCakNames.some((name) => name.startsWith('cas/')) && normalizedCakNames.some((name) => name.startsWith('arena/')), 'catalog includes newly resolved CAS and arena path families');
 ok(cakReaderJs.includes('variantsFor') && cakReaderJs.includes("/^root\\//i"), 'developer catalog builder safely handles extraction trees wrapped in a Root folder');
 ok(cakHtml.includes('value="resolved"') && cakHtml.includes('Unresolved entries (advanced)'), 'archive page separates ready files from unresolved research entries');
 ok(cakReaderJs.includes("options.scope) ? options.scope : 'resolved'"), 'archive searches default to real-path files only');

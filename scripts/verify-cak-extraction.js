@@ -25,7 +25,8 @@ try {
   for (const [archiveName, relativePath] of jobs) {
     const archivePath = path.join(game, archiveName);
     const session = openArchive(archivePath, dictionary);
-    const file = session.files.find((candidate) => candidate.name === relativePath && candidate.extractable);
+    const normalizedRelativePath = relativePath.toLowerCase();
+    const file = session.files.find((candidate) => candidate.name.toLowerCase() === normalizedRelativePath && candidate.extractable);
     if (!file) throw new Error('Verified test entry was not found: ' + relativePath);
     const outputRoot = path.join(temp, path.basename(archiveName, '.cak'));
     fs.mkdirSync(outputRoot, { recursive: true });
@@ -42,7 +43,7 @@ try {
     const result = cp.spawnSync(helper, [requestPath], { encoding: 'utf8', windowsHide: true, maxBuffer: 10 * 1024 * 1024 });
     if (result.error || result.status !== 0) throw new Error((result.error && result.error.message) || result.stderr || result.stdout || 'CAK helper failed.');
     const parsed = JSON.parse(String(result.stdout || '').trim());
-    const recovered = path.join(outputRoot, ...relativePath.split('/'));
+    const recovered = path.join(outputRoot, ...file.name.split('/'));
     if (!parsed.results || !parsed.results[0] || !parsed.results[0].Ok) throw new Error('Helper rejected ' + relativePath);
     if (!fs.existsSync(recovered) || fs.statSync(recovered).size !== file.expandedSize) throw new Error('Recovered file did not match the catalog size: ' + relativePath);
     console.log(`OK: ${archiveName} -> ${relativePath} (${file.expandedSize} bytes; ${file.compressed ? 'compressed' : 'stored'})`);
