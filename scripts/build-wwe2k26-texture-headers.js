@@ -7,7 +7,7 @@ const csvPath = path.resolve(process.argv[2] || '');
 const extractedRoot = path.resolve(process.argv[3] || '');
 const outputPath = path.resolve(process.argv[4] || path.join(__dirname, '..', 'app', 'data', 'cak-texture-headers.json'));
 
-if (!fs.existsSync(csvPath) || !fs.statSync(csvPath).isFile()) throw new Error('CakeView registry CSV was not found.');
+if (!fs.existsSync(csvPath) || !fs.statSync(csvPath).isFile()) throw new Error('registry CSV was not found.');
 if (!fs.existsSync(extractedRoot) || !fs.statSync(extractedRoot).isDirectory()) throw new Error('The WWE 2K26 extracted Root folder was not found.');
 
 function reverseHexBytes(value) {
@@ -33,7 +33,7 @@ function readDdsHeader(filePath) {
 
 const csv = fs.readFileSync(csvPath, 'utf8').replace(/^\uFEFF/, '');
 const lines = csv.split(/\r?\n/).filter(Boolean);
-if (!/^Asset\/Directory GUID,Full Path$/i.test(lines[0].trim())) throw new Error('The CSV does not have the expected CakeView registry header.');
+if (!/^Asset\/Directory GUID,Full Path$/i.test(lines[0].trim())) throw new Error('The CSV does not have the expected registry export header.');
 
 const headers = [];
 const headerIndexes = new Map();

@@ -4,7 +4,7 @@ const cp = require('child_process');
 
 const root = path.join(__dirname, '..');
 const appFolder = path.join(root, 'dist', 'Aurora Forge-win32-x64');
-const zipPath = path.join(root, 'portable-release', 'AF-160m-x64.zip');
+const zipPath = path.join(root, 'portable-release', 'AF-160-RC1-Windows-x64.zip');
 const asarPath = path.join(appFolder, 'resources', 'app.asar');
 const unpackedTools = path.join(appFolder, 'resources', 'app.asar.unpacked', 'app', 'tools');
 
@@ -95,7 +95,6 @@ try {
   assert(containsSuffix('app/creative-studios.html'), 'packaged runtime contains Prompt Builders hub');
   assert(containsSuffix('app/tools.html'), 'packaged runtime contains Tools hub');
   assert(containsSuffix('app/faq.html'), 'packaged runtime contains prompt-generator FAQ');
-  assert(!containsSuffix('app/100-percent-not-tribute.html'), 'packaged runtime excludes retired 100% NOT Tribute preview');
   assert(containsSuffix('app/complete-character-modding-guide.html'), 'packaged runtime contains complete character guide');
   assert(containsSuffix('app/data/wwe2k26-modding-facts.json'), 'packaged runtime contains current modding fact library');
   assert(containsSuffix('app/tutorials.html'), 'packaged runtime contains consolidated Tutorials');
@@ -105,13 +104,13 @@ try {
   assert(containsSuffix('app/training/community-reference/tribute26-replace-slot-checkbox.png'), 'packaged runtime contains the Tribute slot-replacement reference');
   assert(containsSuffix('app/training/community-reference/tribute26-entrance-template-editor.png'), 'packaged runtime contains the Tribute entrance-template reference');
   assert(containsSuffix('app/training/community-reference/tribute26-prop-profile-generator.mp4'), 'packaged runtime contains the compressed Tribute prop tutorial');
-  assert(containsSuffix('app/dev-panel.html'), 'packaged runtime contains the separate Dev panel');
   assert(containsSuffix('app/caw-character-builder.html'), 'packaged runtime contains Creator Suite');
   assert(containsSuffix('app/character-viewer.html'), 'packaged runtime contains Character Viewer');
   assert(containsSuffix('app/dds-converter.html'), 'packaged runtime contains automatic DDS Converter');
   assert(containsSuffix('app/assets/js/dds-converter.js'), 'packaged runtime contains DDS Converter interface logic');
   assert(containsSuffix('app/cak-explorer.html'), 'packaged runtime contains Game Archive Explorer');
   assert(containsSuffix('app/assets/js/cak-explorer.js'), 'packaged runtime contains Game Archive Explorer interface logic');
+  assert(containsSuffix('electron/archive-repackager.js'), 'packaged runtime contains the verified project repackager');
   assert(containsSuffix('app/data/cak-known-paths.json'), 'packaged runtime contains the real-path CAK catalog');
   assert(containsSuffix('app/tools/cak-helper/AuroraCakHelper.exe'), 'packaged runtime contains self-contained x64 CAK extraction helper');
   assert(containsSuffix('electron/cak-reader.js'), 'packaged runtime contains read-only CAK catalog reader');

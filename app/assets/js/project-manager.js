@@ -38,7 +38,7 @@
     return {
       app: 'Aurora Forge',
       schema_version: '1.0',
-      release: '1.6.0.m',
+      release: '1.6.0 RC1',
       saved_at: new Date().toISOString(),
       project: {
         name: value('pmProjectName') || 'New WWE 2K26 Project',

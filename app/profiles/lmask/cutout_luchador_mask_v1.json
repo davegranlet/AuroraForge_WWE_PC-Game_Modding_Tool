@@ -289,7 +289,7 @@
     ]
   },
   "profile_family": "flat_uv_cutout",
-  "source_reference": "Derived from a permitted in-game mask_color reference reviewed for this profile.",
+  "source_reference": "Profile layout reference for compatible user-supplied mask textures.",
   "coordinate_rules": {
     "cell_width": "canvasWidth / 128",
     "cell_height": "canvasHeight / 128",

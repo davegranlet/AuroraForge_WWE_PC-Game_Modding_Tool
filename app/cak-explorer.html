@@ -76,9 +76,19 @@
 
       <pre id="cakDevDetails" hidden>No archive is open.</pre>
 
+      <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Repackager</div>
+        <h2>Package an extracted mod project</h2>
+        <p>Choose a prepared project folder and Aurora Forge will create a portable ZIP with the same relative layout, a file manifest, and SHA-256 checksums. The completed package is reopened and checksum-verified before it is reported as ready.</p>
+        <div class="cak-path-row"><code id="repackSourcePath">No project folder selected.</code><button id="repackChooseSource" class="ai-btn secondary" type="button">Choose Project Folder</button></div>
+        <div class="ai-actions"><button id="repackBuild" class="ai-btn" type="button" disabled>Build Verified Package</button></div>
+        <p class="cak-message">RC1 creates a portable mod-project package. It does not overwrite or replace a game CAK archive.</p>
+        <p id="repackMessage" class="cak-message" role="status"></p>
+      </section>
+
       <section class="ai-panel warn-panel app-panel">
         <div class="section-label" style="margin-top:0;">Important</div>
-        <h2>This is an extractor, not an archive editor</h2>
+        <h2>Original game archives remain read-only</h2>
         <p>Aurora Forge never changes the selected CAK. Every confirmed path is built into the release, so the normal list creates useful Windows folders without asking you to scan an extracted game. Files without confirmed names remain unavailable until an Aurora Forge catalog update supplies them. Keep extracted game assets for personal modding and do not redistribute copyrighted game content.</p>
         <div class="ai-actions"><a class="ai-btn secondary" href="tutorials.html#cak-explorer">Open the child-friendly tutorial</a><a class="ai-btn secondary" href="setup.html#external-programs">Check Setup</a></div>
       </section>

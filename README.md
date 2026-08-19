@@ -15,6 +15,7 @@ It is not an AI chatbot, does not automatically send prompts to an AI provider, 
 - Local project organization and save/load tools
 - WWE 2K26 workflow guidance and validation references
 - Read-only CAK catalog browsing and Windows extraction support
+- Checksum-verified mod-project repackaging on Windows and Linux
 - Windows DDS conversion through Microsoft DirectXTex
 - Native Windows x64 and Linux x64 desktop packages
 
@@ -25,6 +26,7 @@ Requirements: Node.js 24 or a compatible current Node.js release and npm.
 ```text
 npm ci
 npm run verify
+npm run verify:repack
 ```
 
 Windows-specific native verification:
@@ -43,6 +45,8 @@ npm run build:linux
 
 ## Platform notes
 
-The Linux edition natively supports prompt building, projects, saving/export, references, validation guidance, and CAK catalog browsing/search. DDS conversion and Oodle-based CAK extraction remain Windows-only because their underlying helper binaries are Windows-native.
+The Linux edition natively supports prompt building, projects, saving/export, references, validation guidance, CAK catalog browsing/search, and portable mod-project repackaging. DDS conversion and Oodle-based CAK extraction remain Windows-only because their underlying helper binaries are Windows-native.
 
-See [RELEASE_NOTES_1.6.0m.md](RELEASE_NOTES_1.6.0m.md), [AURORA_FORGE_REVIEW.md](AURORA_FORGE_REVIEW.md), and [FAQ.md](FAQ.md) for the current release details.
+Aurora Forge is open source under the MIT License. The Windows extraction helper is built from the source in `tools/AuroraCakHelper/`; the game-owned decompression library is never bundled.
+
+See [RELEASE_NOTES_1.6.0_RC1.md](RELEASE_NOTES_1.6.0_RC1.md) and [FAQ.md](FAQ.md) for the current release details.

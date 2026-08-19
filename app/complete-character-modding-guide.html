@@ -44,7 +44,6 @@
         <ol><li>Close WWE 2K26.</li><li>In Steam, right-click WWE 2K26, choose <b>Manage</b>, then <b>Browse local files</b>.</li><li>Download the current WWE 2K26 CakeHook package from the official Pro Wrestling Mods source.</li><li>Open the package. Copy its <code>dinput8</code> file and <code>Plugins</code> folder into the folder beside the WWE 2K26 executable.</li><li>Do not copy an older game’s CakeHook into WWE 2K26.</li><li>Launch the game once with no character mod installed. Reach the main menu, close the game, and write down whether it worked.</li></ol>
         <div class="guide-check"><b>Pass:</b> the clean game reaches the menu and the CakeHook files remain in the correct game folder.</div>
         <div class="guide-stop"><b>Stop:</b> the game crashes before the menu. Remove the new CakeHook files, restore your clean folder, and obtain the current compatible release.</div>
-        <div class="guide-media-slot"><b>Add video here:</b> Steam “Browse local files,” the WWE 2K26 executable, then the correct placement of <code>dinput8</code> and <code>Plugins</code>.</div>
       </div>
     </section>
 
@@ -52,7 +51,6 @@
       <div class="chapter-number">02</div><div class="chapter-content"><h2>Install and connect CakeView</h2><p>CakeView explores supported game files, previews models/materials, and bakes prepared content.</p>
         <ol><li>Install the current CakeView 26 release from Pro Wrestling Mods.</li><li>Open CakeView and select the WWE 2K26 executable when asked.</li><li>Confirm that CakeView can open the game’s file explorer.</li><li>Create a temporary empty bake test. Do not start with your real character.</li><li>Leave silent baking and directory watching off until a manual bake works.</li><li>Add CakeView’s location in Aurora Forge <b>Setup</b> so it is easy to open later.</li></ol>
         <div class="guide-check"><b>Pass:</b> CakeView recognizes WWE 2K26 and can browse supported files.</div>
-        <div class="guide-media-slot"><b>Add pictures here:</b> CakeView game selection, file explorer, bake area, and settings page.</div>
       </div>
     </section>
 
@@ -61,7 +59,6 @@
         <ol><li>Install the current Tribute 26 release from its official source.</li><li>Open Settings.</li><li>Choose the WWE 2K26 game directory and the correct save location.</li><li>Choose CakeView if the current version provides that setting.</li><li>Keep Auto-Bake off for the first project.</li><li>Confirm the status area reports a usable BakeMe state.</li><li>Back up Tribute’s working/default-data folders before creating a record.</li></ol>
         <div class="guide-check"><b>Pass:</b> Tribute opens, its folders point to WWE 2K26, and the main managers load.</div>
         <div class="guide-stop"><b>Stop:</b> Tribute points to another WWE game, another Steam account, or an unknown save folder.</div>
-        <div class="guide-media-slot"><b>Add video here:</b> open every Tribute 26 main-menu section, then show Settings and all selected paths.</div>
       </div>
     </section>
 
@@ -83,7 +80,6 @@
       <div class="chapter-number">06</div><div class="chapter-content"><h2>Choose a safe model base</h2><p>A new character normally begins from a known-working WWE 2K26 character structure that matches the body/skeleton category you need.</p>
         <ol><li>Use CakeView to inspect a suitable source character.</li><li>Record every folder, model, material, and texture name before changing anything.</li><li>Export supported model parts for editing only through the current CakeView/PWM Blender workflow.</li><li>Keep the skeleton, required mesh names, UV maps, material slots, and model scale unless the current tool documentation says otherwise.</li><li>Build original geometry or use assets you are allowed to modify.</li><li>Test the base body before adding hair and clothing.</li></ol>
         <div class="guide-stop"><b>Stop:</b> you do not know which skeleton/body category the source uses, exported UVs changed, or model import reports missing parts.</div>
-        <div class="guide-media-slot"><b>Add video here:</b> CakeView model preview → supported export → Blender import → untouched UV check → supported re-import.</div>
       </div>
     </section>
 
@@ -103,7 +99,6 @@
         <div class="guide-alert version"><strong>Important:</strong> <code>-m 0</code> requests a full mip chain. Some target textures intentionally have a different mip count. Match the working original when the game expects something specific.</div>
         <div class="guide-check"><b>Pass:</b> filename, dimensions, format, alpha behavior, and mipmaps match the target.</div>
         <div class="guide-stop"><b>Stop:</b> the converted texture is black, loses transparency, changes size, or reports a different format than the stock target.</div>
-        <div class="guide-media-slot"><b>Add video here:</b> install texconv, convert one DDS to PNG, edit the PNG, convert it back using the original DDS format, and compare both headers.</div>
       </div>
     </section>
 
@@ -125,7 +120,6 @@
       <div class="chapter-number">11</div><div class="chapter-content"><h2>Create the character record in Tribute</h2>
         <ol><li>Open <b>Easy Wizard</b> or <b>Create Character</b>.</li><li>Load a trusted profile JSON, or enter Profile A and Profile B manually.</li><li>Check name, gender/category, height, weight, class, hometown, announcer ID, and crowd settings.</li><li>Choose a new slot for a first project. Treat <b>Replace</b> as advanced.</li><li>Select the prepared character folder and render DDS.</li><li>Do not create the record until every path is correct.</li><li>Save/export the character profile JSON into <code>06_Profiles_JSON</code>.</li></ol>
         <div class="guide-fact"><b>Protect default data:</b> keep Tribute’s BakeMe/default profile data current. Game-save data can change when you edit in-game or when a save is replaced. Reusable JSON/default profiles make recovery easier.</div>
-        <div class="guide-media-slot"><b>Add video here:</b> every page of the current Create Character Wizard, including slot choice, JSON fields, files, and final review.</div>
       </div>
     </section>
 
@@ -140,7 +134,6 @@
       <div class="chapter-number">13</div><div class="chapter-content"><h2>Add entrance, victory, music, and graphics</h2>
         <ol><li>Open Tribute’s entrance/template tools.</li><li>Choose the normal entrance, title entrance, double-title entrance, MITB entrance, victory, music ID, and GFX template.</li><li>Save as a new template instead of overwriting an unrelated one.</li><li>Use only music you own or may use.</li><li>Prepare the theme with the current SoundFactory/audio workflow. Audio codecs, IDs, and import steps are version-sensitive, so follow the current PWM SoundFactory instructions.</li><li>Assign the verified theme ID in the character’s entrance/template data.</li><li>Prepare the render, nameplate, trons, and other graphics, then link only IDs you have verified.</li><li>Export/save entrance and victory default-data profiles when supported.</li></ol>
         <div class="guide-fact"><b>Current community tool note:</b> recent WWE 2K26 tutorials use SoundFactory for custom themes. Use the current release and its own instructions rather than an old WWE 2K25 conversion recipe.</div>
-        <div class="guide-media-slot"><b>Add videos here:</b> SoundFactory import and ID assignment; Tribute Entrance Template Editor; render/GFX assignment; in-game entrance and victory test.</div>
       </div>
     </section>
 

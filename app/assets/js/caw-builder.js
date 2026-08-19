@@ -28,7 +28,7 @@
   }
 
   function collectProject() {
-    var data = { app:'Aurora Forge', workflow:'creator_suite', version:'1.6.0.m', saved_at:new Date().toISOString(), fields:{}, checklist:{} };
+    var data = { app:'Aurora Forge', workflow:'creator_suite', version:'1.6.0 RC1', saved_at:new Date().toISOString(), fields:{}, checklist:{} };
     fieldIds.forEach(function (id) { data.fields[id] = value(id); });
     checkIds.forEach(function (id) { data.checklist[id] = checked(id); });
     return data;

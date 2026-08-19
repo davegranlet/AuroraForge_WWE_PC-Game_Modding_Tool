@@ -36,7 +36,7 @@ try {
       outputRoot,
       archiveKey: session.key,
       overwrite: false,
-      entries: [{ id: file.id, offset: Number(file.offset), storedSize: file.storedSize, expandedSize: file.expandedSize, compressed: file.compressed, protected: file.protected, relativePath: file.name }]
+      entries: [{ id: file.id, offset: Number(file.offset), storedSize: file.storedSize, expandedSize: file.expandedSize, compressed: file.compressed, protected: file.protected, relativePath: file.name, chunks: file.chunks }]
     };
     const requestPath = path.join(temp, archiveName + '.json');
     fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
@@ -44,7 +44,7 @@ try {
     if (result.error || result.status !== 0) throw new Error((result.error && result.error.message) || result.stderr || result.stdout || 'CAK helper failed.');
     const parsed = JSON.parse(String(result.stdout || '').trim());
     const recovered = path.join(outputRoot, ...file.name.split('/'));
-    if (!parsed.results || !parsed.results[0] || !parsed.results[0].Ok) throw new Error('Helper rejected ' + relativePath);
+    if (!parsed.results || !parsed.results[0] || !parsed.results[0].Ok) throw new Error('Helper rejected ' + relativePath + ': ' + ((parsed.results && parsed.results[0] && parsed.results[0].Error) || 'no result'));
     if (!fs.existsSync(recovered) || fs.statSync(recovered).size !== file.expandedSize) throw new Error('Recovered file did not match the catalog size: ' + relativePath);
     console.log(`OK: ${archiveName} -> ${relativePath} (${file.expandedSize} bytes; ${file.compressed ? 'compressed' : 'stored'})`);
   }

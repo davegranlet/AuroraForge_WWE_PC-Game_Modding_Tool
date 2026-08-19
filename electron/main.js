@@ -4,6 +4,7 @@ const fs = require('fs');
 const cp = require('child_process');
 const { pathToFileURL } = require('url');
 const cakReader = require('./cak-reader');
+const archiveRepackager = require('./archive-repackager');
 
 const APP_ROOT = path.join(__dirname, '..', 'app');
 const DEFAULT_PROJECTS_DIR_NAME = 'Aurora Forge Projects';
@@ -352,7 +353,7 @@ function createWindow() {
       submenu: [
         { label: 'Tutorials', click: () => mainWindow.loadURL('wwe2k26://app/tutorials.html') },
         { type: 'separator' },
-        { label: 'About', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'About Aurora Forge', message: 'Aurora Forge', detail: 'Version 1.6.0.m · Prompt Builder Edition\nA WWE 2K26 prompt-building and workflow-preparation workspace. Aurora Forge prepares prompts and handoff packs; your chosen AI creates the result.' }) }
+        { label: 'About', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'About Aurora Forge', message: 'Aurora Forge', detail: 'Version 1.6.0 RC1 · Prompt Builder Edition\nA WWE 2K26 prompt-building and workflow-preparation workspace. Aurora Forge prepares prompts and handoff packs; your chosen AI creates the result.' }) }
       ]
     }
   ];
@@ -589,6 +590,19 @@ ipcMain.handle('desktop:cak-explorer-open-output', async () => {
   return { ok: !error, error };
 });
 
+ipcMain.handle('desktop:repackager-choose-source', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the extracted mod-project folder', properties: ['openDirectory'] });
+  return result.canceled || !result.filePaths.length ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
+});
+
+ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
+  const source = path.resolve(String(sourceRoot || ''));
+  if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable source folder first.');
+  const result = await dialog.showSaveDialog({ title: 'Save Aurora Forge mod package', defaultPath: path.basename(source) + '.zip', filters: [{ name: 'ZIP package', extensions: ['zip'] }] });
+  if (result.canceled || !result.filePath) return { ok: false };
+  return { ok: true, ...archiveRepackager.buildPackage(source, result.filePath) };
+});
+
 ipcMain.handle('desktop:dds-converter-choose-inputs', async (_event, mode) => {
   const normalizedMode = mode === 'png-to-dds' ? 'png-to-dds' : 'dds-to-png';
   const extension = normalizedMode === 'png-to-dds' ? 'png' : 'dds';
@@ -734,7 +748,7 @@ ipcMain.handle('desktop:create-project-folder', async (_event, payload) => {
   ['approved-images', 'profiles', 'prompts', 'handoff-packs', 'outputs', 'exports', 'notes'].forEach((folder) => ensureDir(path.join(projectPath, folder)));
   const project = {
     app: 'Aurora Forge',
-    release: '1.6.0.m Prompt Builder Edition',
+    release: '1.6.0 RC1 Prompt Builder Edition',
     name: projectName,
     type: payload && payload.type ? payload.type : 'lmask',
     notes: payload && payload.notes ? payload.notes : '',

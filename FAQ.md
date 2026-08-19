@@ -40,6 +40,10 @@ Yes. Review it in Aurora Forge where available, or edit the copied/downloaded te
 
 Yes. Builders provide copy, text download, project, or handoff-pack options depending on the workflow.
 
+## What does the repackager do?
+
+It gathers an extracted mod project into one portable ZIP, adds a file-and-checksum manifest, and verifies the completed package. It does not edit or replace the game's original CAK archives.
+
 ## Does Aurora Forge send my prompt to an AI automatically?
 
 No. Your prompts stay under your control until you decide to copy, export, or upload them elsewhere.
@@ -59,6 +63,10 @@ A chatbot receives a request and tries to produce the final answer or asset. A p
 ## Who is Aurora Forge for?
 
 It is for WWE 2K26 creators and modders who want more complete prompts, repeatable project organization, practical handoff files, and workflow guidance without needing to become prompt-engineering experts.
+
+## Is Aurora Forge open source?
+
+Yes. Aurora Forge and its extraction-helper source are available under the MIT License. Required third-party license notices are included with the project.
 
 ## What is the simplest way to explain Aurora Forge?
 

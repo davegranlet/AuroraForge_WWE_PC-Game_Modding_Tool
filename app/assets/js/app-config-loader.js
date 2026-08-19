@@ -36,9 +36,6 @@
   }
 
   function alignProductNavigation() {
-    document.querySelectorAll('a[href="100-percent-not-tribute.html"]').forEach(function (link) {
-      link.remove();
-    });
     document.querySelectorAll('a[href="creative-studios.html"] strong').forEach(function (label) {
       label.textContent = 'Prompt Builders';
       var detail = label.parentElement && label.parentElement.querySelector('small');
