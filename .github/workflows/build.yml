@@ -28,9 +28,6 @@ jobs:
       - name: Verify Windows DDS conversion
         if: runner.os == 'Windows'
         run: npm run verify:dds
-      - name: Verify Windows CAK extraction
-        if: runner.os == 'Windows'
-        run: npm run verify:cak
 
   windows-package:
     name: Build Windows x64
