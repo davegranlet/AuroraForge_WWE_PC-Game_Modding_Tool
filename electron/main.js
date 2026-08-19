@@ -9,6 +9,11 @@ const archiveRepackager = require('./archive-repackager');
 const APP_ROOT = path.join(__dirname, '..', 'app');
 const START_PAGE = process.env.AURORA_START_PAGE || 'index.html';
 const WINDOW_TITLE = process.env.AURORA_WINDOW_TITLE || 'Aurora Forge';
+const STANDALONE_TOOL = process.env.AURORA_STANDALONE_TOOL || '';
+if (STANDALONE_TOOL) {
+  app.setName(WINDOW_TITLE);
+  app.setPath('userData', path.join(app.getPath('appData'), WINDOW_TITLE));
+}
 const DEFAULT_PROJECTS_DIR_NAME = 'Aurora Forge Projects';
 const DEFAULT_EXPORTS_DIR_NAME = 'Aurora Forge Exports';
 let lastDdsConverterOutputDir = '';
@@ -312,7 +317,6 @@ function createWindow() {
     height: 900,
     minWidth: 960,
     minHeight: 720,
-    title: 'Aurora Forge',
     icon: path.join(APP_ROOT, 'assets', 'img', 'app-icon.ico'),
     backgroundColor: '#11131a',
     webPreferences: {
@@ -365,7 +369,7 @@ function createWindow() {
       ]
     }
   ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(STANDALONE_TOOL ? null : Menu.buildFromTemplate(template));
 }
 
 app.whenReady().then(() => {

@@ -18,6 +18,7 @@
     "pack:win": "electron-packager build/runtime-staging \"Aurora Forge\" --platform=win32 --arch=x64 --out=dist --overwrite --asar.unpackDir=app/tools --icon=app/assets/img/app-icon.ico --app-version=1.7.0 --build-version=1.7.0",
     "pack:linux": "electron-packager build/runtime-staging \"Aurora Forge\" --platform=linux --arch=x64 --out=dist --overwrite --asar.unpackDir=app/tools --icon=app/assets/img/app-icon-256.png --app-version=1.7.0 --build-version=1.7.0",
     "build:standalones": "node scripts/build-standalone-windows.js",
+    "verify:standalones": "node scripts/verify-standalone-staging.js",
     "build:portable": "node scripts/build-true-portable-windows.js",
     "build:linux": "node scripts/build-native-linux.js",
     "verify:portable": "node scripts/verify-final-portable.js",
