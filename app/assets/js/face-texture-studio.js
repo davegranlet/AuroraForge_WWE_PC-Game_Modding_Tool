@@ -316,7 +316,7 @@
     data.selected_profile_filename = profileFilename();
     data.app = 'Aurora Forge';
     data.workflow = 'face_texture';
-    data.version = '1.6.0 RC1';
+    data.version = '1.7 Major RC1';
     return data;
   }
 
@@ -977,7 +977,7 @@
     projectStatus('Preset deleted.');
   };
   window.downloadFacePresetLibrary = function () {
-    var pack = { library: 'WWE 2K26 Face Texture Presets', version: '1.6.0 RC1', presets: loadPresets() };
+    var pack = { library: 'WWE 2K26 Face Texture Presets', version: '1.7 Major RC1', presets: loadPresets() };
     downloadTextFile('wwe-2k26-face-texture-presets.json', JSON.stringify(pack, null, 2) + '\n');
     projectStatus('Preset library exported.');
   };

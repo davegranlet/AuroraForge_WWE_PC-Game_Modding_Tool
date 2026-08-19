@@ -22,10 +22,11 @@
       const row = document.createElement('tr');
       const boxCell = document.createElement('td');
       const box = document.createElement('input');
-      box.type = 'checkbox'; box.checked = state.selected.has(item.id); box.disabled = item.extractable === false || !item.nameResolved; box.setAttribute('aria-label', !item.nameResolved ? 'This entry needs a real filename before extraction' : (item.extractable === false ? `${item.name} is stored in another archive` : `Select ${item.name}`));
+      box.type = 'checkbox'; box.checked = state.selected.has(item.id); box.disabled = item.extractable === false; box.setAttribute('aria-label', item.extractable === false ? `${item.name} is an external reference with no payload in this archive` : (item.nameResolved ? `Select ${item.name}` : `Select raw hash entry ${item.name}`));
       box.addEventListener('change', () => { if (box.checked) state.selected.add(item.id); else state.selected.delete(item.id); updateSelected(); });
       boxCell.appendChild(box);
-      const values = [item.extractable === false ? `${item.name} (linked)` : item.name, item.type || 'bin', formatBytes(item.storedSize), formatBytes(item.expandedSize), item.folderName || `Unresolved folder ${item.folderIndex}`];
+      const label = item.extractable === false ? `${item.name} (external reference)` : (!item.nameResolved ? `${item.name} (raw hash name)` : item.name);
+      const values = [label, item.type || 'bin', formatBytes(item.storedSize), formatBytes(item.expandedSize), item.folderName || `Unresolved folder ${item.folderIndex}`];
       row.appendChild(boxCell);
       values.forEach((value, index) => { const cell = document.createElement('td'); cell.textContent = value; if (index === 0) { cell.title = item.hash; if (item.nameResolved) cell.classList.add('cak-known-name'); } row.appendChild(cell); });
       return row;
@@ -48,9 +49,47 @@
     byId('cakSummaryFiles').textContent = summary.fileCount.toLocaleString();
     byId('cakSummaryFolders').textContent = summary.folderCount.toLocaleString();
     byId('cakSummarySize').textContent = formatBytes(summary.totalExpanded);
-    byId('cakSummaryNames').textContent = summary.resolvedNames.toLocaleString();
+    byId('cakSummaryNames').textContent = summary.readyFiles.toLocaleString();
     byId('cakDevDetails').textContent = JSON.stringify(summary, null, 2);
     state.page = 0; state.selected.clear(); renderRows(result.results);
+  }
+  async function openArchive(scope) {
+    const openEveryArchive = scope === 'all-archives';
+    if (!state.archivePath && !openEveryArchive) {
+      const chosen = await api.chooseCakArchive();
+      if (!chosen || !chosen.ok) return;
+      state.archivePath = chosen.path;
+      byId('cakArchivePath').textContent = chosen.path;
+      byId('cakOpenArchive').disabled = false;
+    }
+    const browseAll = scope === 'all';
+    message('cakOpenMessage', openEveryArchive ? 'Reading every CAK in the configured game folder...' : (browseAll ? 'Reading every archive catalog entry...' : 'Reading the archive catalog...'), 'working');
+    byId('cakOpenArchive').disabled = true;
+    byId('cakBrowseAll').disabled = true;
+    try {
+      const result = openEveryArchive ? await api.openAllCakArchives() : await api.openCakArchive(state.archivePath);
+      applyOpen(result);
+      if (browseAll || openEveryArchive) {
+        state.scope = 'all';
+        state.page = 0;
+        byId('cakScope').value = 'all';
+        await search();
+      } else {
+        state.scope = 'resolved';
+        byId('cakScope').value = 'resolved';
+      }
+      if (openEveryArchive) byId('cakArchivePath').textContent = `${result.archiveCount} CAKs from the configured game folder`;
+      message('cakOpenMessage', openEveryArchive
+        ? `${result.archiveCount} CAKs are open together with ${result.summary.fileCount.toLocaleString()} total entries. Search and extract across all of them from this list.`
+        : browseAll
+        ? `${result.summary.archiveName} is open with all ${result.summary.fileCount.toLocaleString()} entries: ${result.summary.rawHashPayloads.toLocaleString()} extractable raw-hash payload(s) and ${result.summary.externalReferences.toLocaleString()} external reference(s) with no payload in this archive.`
+        : `${result.summary.archiveName} is ready with ${result.summary.readyFiles.toLocaleString()} named payload file(s).`, 'good');
+    } catch (error) {
+      message('cakOpenMessage', error.message, 'bad');
+    } finally {
+      byId('cakOpenArchive').disabled = !state.archivePath;
+      byId('cakBrowseAll').disabled = false;
+    }
   }
   async function initialize() {
     if (!api) { message('cakOpenMessage', 'Open this page inside the portable Aurora Forge app.', 'bad'); return; }
@@ -70,7 +109,8 @@
   }
   byId('cakArchiveSelect').addEventListener('change', (event) => { state.archivePath = event.target.value; byId('cakArchivePath').textContent = state.archivePath || 'No archive selected.'; byId('cakOpenArchive').disabled = !state.archivePath; });
   byId('cakBrowseArchive').addEventListener('click', async () => { try { const result = await api.chooseCakArchive(); if (!result.ok) return; state.archivePath = result.path; byId('cakArchivePath').textContent = result.path; byId('cakOpenArchive').disabled = false; } catch (error) { message('cakOpenMessage', error.message, 'bad'); } });
-  byId('cakOpenArchive').addEventListener('click', async () => { message('cakOpenMessage', 'Reading the archive catalog...', 'working'); byId('cakOpenArchive').disabled = true; try { const result = await api.openCakArchive(state.archivePath); applyOpen(result); message('cakOpenMessage', `${result.summary.archiveName} is ready with ${result.summary.resolvedNames.toLocaleString()} safely named file(s).`, 'good'); } catch (error) { message('cakOpenMessage', error.message, 'bad'); } finally { byId('cakOpenArchive').disabled = false; } });
+  byId('cakOpenArchive').addEventListener('click', () => openArchive('resolved'));
+  byId('cakBrowseAll').addEventListener('click', () => openArchive('all-archives'));
   byId('cakExtractAllArchives').addEventListener('click', async () => {
     const paths = [...byId('cakArchiveSelect').options].map((option) => option.value).filter(Boolean);
     if (!paths.length) { message('cakOpenMessage', 'Set the WWE 2K26 game folder in Setup first.', 'bad'); return; }
@@ -102,11 +142,13 @@
   byId('cakSearch').addEventListener('keydown', (event) => { if (event.key === 'Enter') byId('cakSearchButton').click(); });
   byId('cakPrevious').addEventListener('click', async () => { if (state.page > 0) { state.page -= 1; await search(); } });
   byId('cakNext').addEventListener('click', async () => { if (state.page + 1 < state.pages) { state.page += 1; await search(); } });
-  byId('cakSelectPage').addEventListener('change', (event) => { state.items.filter((item) => item.extractable !== false && item.nameResolved).forEach((item) => event.target.checked ? state.selected.add(item.id) : state.selected.delete(item.id)); renderRows({ items: state.items, pages: state.pages, page: state.page, total: Number(byId('cakPageLabel').textContent.match(/- ([\d,]+)/)?.[1].replace(/,/g, '') || state.items.length), types: [] }); });
+  byId('cakSelectPage').addEventListener('change', (event) => { state.items.filter((item) => item.extractable !== false).forEach((item) => event.target.checked ? state.selected.add(item.id) : state.selected.delete(item.id)); renderRows({ items: state.items, pages: state.pages, page: state.page, total: Number(byId('cakPageLabel').textContent.match(/- ([\d,]+)/)?.[1].replace(/,/g, '') || state.items.length), types: [] }); });
   byId('cakChooseOutput').addEventListener('click', async () => { try { const result = await api.chooseCakOutput(); if (!result.ok) return; state.outputPath = result.path; byId('cakOutputPath').textContent = result.path; updateSelected(); } catch (error) { message('cakExtractMessage', error.message, 'bad'); } });
   byId('cakExtract').addEventListener('click', async () => { const count = state.selected.size; if (!count || !state.outputPath) return; if (!window.confirm(`Extract ${count} selected file(s) into the separate output folder?\n\nThe CAK will not be changed.`)) return; byId('cakExtract').disabled = true; message('cakExtractMessage', 'Extracting and checking files. Large files can take a little while...', 'working'); try { const result = await api.extractCakEntries({ ids: [...state.selected], outputRoot: state.outputPath, overwrite: byId('cakOverwrite').checked }); message('cakExtractMessage', `${result.succeeded} succeeded; ${result.failed} failed. An extraction report was saved with the files.`, result.failed ? 'bad' : 'good'); byId('cakOpenOutput').disabled = false; } catch (error) { message('cakExtractMessage', error.message, 'bad'); } finally { updateSelected(); } });
   byId('cakOpenOutput').addEventListener('click', async () => { try { await api.openCakOutput(); } catch (error) { message('cakExtractMessage', error.message, 'bad'); } });
-  byId('repackChooseSource').addEventListener('click', async () => { try { const result = await api.chooseRepackSource(); if (!result.ok) return; state.repackSource = result.path; byId('repackSourcePath').textContent = result.path; byId('repackBuild').disabled = false; message('repackMessage', 'Project folder ready to package.', 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } });
-  byId('repackBuild').addEventListener('click', async () => { if (!state.repackSource) return; const button = byId('repackBuild'); button.disabled = true; message('repackMessage', 'Building and verifying the package...', 'working'); try { const result = await api.buildRepackPackage(state.repackSource); if (!result.ok) return; message('repackMessage', `Verified package created with ${result.fileCount.toLocaleString()} project file(s): ${result.outputPath}`, 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } finally { button.disabled = false; } });
+  byId('repackChooseSource').addEventListener('click', async () => { try { const result = await api.chooseRepackSource(); if (!result.ok) return; state.repackSource = result.path; byId('repackSourcePath').textContent = result.path; byId('repackBuild').disabled = false; byId('repackVerify').disabled = true; byId('repackOpenOutput').disabled = true; message('repackMessage', 'BakeMe folder ready. Its own name will not be stored inside the CAK.', 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } });
+  byId('repackBuild').addEventListener('click', async () => { if (!state.repackSource) return; const button = byId('repackBuild'); button.disabled = true; message('repackMessage', 'Building the new CAK and reopening its catalog...', 'working'); try { const result = await api.buildRepackPackage(state.repackSource); if (!result.ok) return; byId('repackVerify').disabled = false; byId('repackOpenOutput').disabled = false; message('repackMessage', `New CAK created and verified with ${result.fileCount.toLocaleString()} file(s) in ${result.folderCount.toLocaleString()} folder(s): ${result.outputPath}`, 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } finally { button.disabled = false; } });
+  byId('repackVerify').addEventListener('click', async () => { try { message('repackMessage', 'Reopening and checking the new CAK...', 'working'); const result = await api.verifyRepackPackage(); message('repackMessage', `CAK catalog verified: ${result.outputPath}`, 'good'); } catch (error) { message('repackMessage', error.message, 'bad'); } });
+  byId('repackOpenOutput').addEventListener('click', async () => { try { await api.openRepackOutput(); } catch (error) { message('repackMessage', error.message, 'bad'); } });
   initialize();
 }());

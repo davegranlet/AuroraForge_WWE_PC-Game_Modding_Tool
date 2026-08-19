@@ -1,6 +1,6 @@
 param(
   [string]$AppFolder = "dist\Aurora Forge-win32-x64",
-  [string]$ZipName = "AF-160-RC1-Windows-x64.zip"
+  [string]$ZipName = "Aurora-Forge-1.7Major-RC1-Windows-x64.zip"
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,7 +42,7 @@ Recommended workflow:
 5. Use Tutorials for short lessons, animated videos, troubleshooting, and advanced reference downloads.
 6. Take the exported prompt to your chosen compatible AI, then validate the resulting files in CakeView and in game.
 
-Version: 1.6.0 RC1
+Version: 1.7 Major RC1
 Edition: Prompt Builder Edition
 
 Aurora Forge prepares instructions and supporting files. It is not an AI chatbot
@@ -76,9 +76,13 @@ Get-ChildItem -LiteralPath $AppFolder -Force -Recurse | ForEach-Object {
   }
 }
 $rootItem = Get-Item -LiteralPath $AppFolder
-$rootItem.CreationTime = $safeDate
-$rootItem.LastWriteTime = $safeDate
-$rootItem.LastAccessTime = $safeDate
+try {
+  $rootItem.CreationTime = $safeDate
+  $rootItem.LastWriteTime = $safeDate
+  $rootItem.LastAccessTime = $safeDate
+} catch {
+  Write-Warning "Could not normalize timestamp for the portable app folder. Its contents were normalized successfully."
+}
 
 Write-Step "Creating final portable app ZIP..."
 try {

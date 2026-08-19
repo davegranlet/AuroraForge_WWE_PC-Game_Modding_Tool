@@ -37,7 +37,8 @@
           <label class="cak-field"><span>Archives found in your game folder</span><select id="cakArchiveSelect"><option value="">Choose an archive...</option></select></label>
           <div class="cak-field"><span>Or choose a CAK anywhere</span><button id="cakBrowseArchive" class="ai-btn secondary" type="button">Browse for CAK</button></div>
         </div>
-        <div class="cak-path-row"><code id="cakArchivePath">No archive selected.</code><button id="cakOpenArchive" class="ai-btn" type="button" disabled>Open Archive</button></div>
+        <div class="cak-path-row"><code id="cakArchivePath">No archive selected.</code><button id="cakOpenArchive" class="ai-btn" type="button" disabled>Open Selected CAK</button><button id="cakBrowseAll" class="ai-btn secondary" type="button">Open All Game CAKs</button></div>
+        <p class="cak-message">Open Selected CAK reads the archive chosen above. Open All Game CAKs combines every .cak found in the configured game folder into one searchable browser.</p>
         <div class="ai-actions cak-extract-all-main"><button id="cakExtractAllArchives" class="ai-btn" type="button">Extract All CAK Files</button></div>
         <p id="cakOpenMessage" class="cak-message" role="status"></p>
       </section>
@@ -52,7 +53,7 @@
         <div class="section-label">2 - Find files</div>
         <div class="cak-search-row">
           <input id="cakSearch" type="search" placeholder="Search by name, hash, or type">
-          <select id="cakScope"><option value="resolved">Ready files</option><option value="unresolved">Unresolved entries (advanced)</option><option value="all">All catalog entries</option></select>
+          <select id="cakScope"><option value="resolved">Ready files</option><option value="unresolved">Raw hashes / external references</option><option value="all">All catalog entries</option></select>
           <select id="cakType"><option value="">All file types</option></select>
           <button id="cakSearchButton" class="ai-btn secondary" type="button">Search</button>
         </div>
@@ -77,19 +78,19 @@
       <pre id="cakDevDetails" hidden>No archive is open.</pre>
 
       <section class="ai-panel app-panel">
-        <div class="section-label" style="margin-top:0;">Repackager</div>
-        <h2>Package an extracted mod project</h2>
-        <p>Choose a prepared project folder and Aurora Forge will create a portable ZIP with the same relative layout, a file manifest, and SHA-256 checksums. The completed package is reopened and checksum-verified before it is reported as ready.</p>
-        <div class="cak-path-row"><code id="repackSourcePath">No project folder selected.</code><button id="repackChooseSource" class="ai-btn secondary" type="button">Choose Project Folder</button></div>
-        <div class="ai-actions"><button id="repackBuild" class="ai-btn" type="button" disabled>Build Verified Package</button></div>
-        <p class="cak-message">RC1 creates a portable mod-project package. It does not overwrite or replace a game CAK archive.</p>
+        <div class="section-label" style="margin-top:0;">CAK Baker</div>
+        <h2>Build a new CAK from a BakeMe folder</h2>
+        <p>Choose the folder whose contents belong in the archive. Aurora Forge excludes the selected folder's own name, then preserves every folder, relative path, and file inside the new <code>.cak</code>.</p>
+        <div class="cak-path-row"><code id="repackSourcePath">No BakeMe folder selected.</code><button id="repackChooseSource" class="ai-btn secondary" type="button">Choose BakeMe Folder</button></div>
+        <div class="ai-actions"><button id="repackBuild" class="ai-btn" type="button" disabled>Build New CAK</button><button id="repackVerify" class="ai-btn secondary" type="button" disabled>Verify New CAK</button><button id="repackOpenOutput" class="ai-btn secondary" type="button" disabled>Open Output Folder</button></div>
+        <p class="cak-message">The source folder stays unchanged. Aurora Forge always writes a separate CAK file.</p>
         <p id="repackMessage" class="cak-message" role="status"></p>
       </section>
 
       <section class="ai-panel warn-panel app-panel">
         <div class="section-label" style="margin-top:0;">Important</div>
         <h2>Original game archives remain read-only</h2>
-        <p>Aurora Forge never changes the selected CAK. Every confirmed path is built into the release, so the normal list creates useful Windows folders without asking you to scan an extracted game. Files without confirmed names remain unavailable until an Aurora Forge catalog update supplies them. Keep extracted game assets for personal modding and do not redistribute copyrighted game content.</p>
+        <p>Aurora Forge never changes the selected CAK. Every confirmed path is built into the release. A payload with an unknown name can still be extracted into an <code>Unresolved</code> folder under a generated hash name. An external reference cannot be extracted from the selected CAK because that catalog record contains no payload bytes. Keep extracted game assets for personal modding and do not redistribute copyrighted game content.</p>
         <div class="ai-actions"><a class="ai-btn secondary" href="tutorials.html#cak-explorer">Open the child-friendly tutorial</a><a class="ai-btn secondary" href="setup.html#external-programs">Check Setup</a></div>
       </section>
     </div>

@@ -1,21 +1,21 @@
 'use strict';
-
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { buildPackage, verifyPackage } = require('../electron/archive-repackager');
-
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aurora-repack-'));
+const { buildCak, verifyCak, scanBakeFolder, encodePairs } = require('../electron/archive-repackager');
+const { decodePairs } = require('../electron/cak-reader');
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aurora-cak-bake-'));
 try {
-  const source = path.join(root, 'project');
-  fs.mkdirSync(path.join(source, 'Characters', 'Test'), { recursive: true });
-  fs.writeFileSync(path.join(source, 'Characters', 'Test', 'sample.bin'), Buffer.from([0, 1, 2, 3, 254, 255]));
-  fs.writeFileSync(path.join(source, 'README.txt'), 'Aurora Forge repackager round-trip test.\n', 'utf8');
-  const first = path.join(root, 'first.zip');
-  const second = path.join(root, 'second.zip');
-  const firstResult = buildPackage(source, first);
-  const secondResult = buildPackage(source, second);
-  if (!firstResult.verified || !verifyPackage(first)) throw new Error('The first package did not pass verification.');
-  if (!fs.readFileSync(first).equals(fs.readFileSync(second))) throw new Error('Identical source folders did not produce identical packages.');
-  console.log(`Aurora Forge repackager verification passed (${firstResult.fileCount} files; deterministic ZIP round trip).`);
+  const source = path.join(root, 'BakeMe');
+  fs.mkdirSync(path.join(source, 'Characters', '100_Test', 'Textures'), { recursive: true });
+  fs.writeFileSync(path.join(source, 'Characters', '100_Test', 'profile.jsfb'), Buffer.from('JSFB test profile'));
+  fs.writeFileSync(path.join(source, 'Characters', '100_Test', 'Textures', 'body_color.dds'), Buffer.from('DDS test texture'));
+  const sample = Buffer.from('catalog encryption round trip'), key = 0x1234abcd;
+  if (!decodePairs(encodePairs(sample, key), key).equals(sample)) throw new Error('Catalog encoder round trip failed.');
+  const output = path.join(root, 'aurora-test.cak');
+  const result = buildCak(source, output);
+  verifyCak(output, scanBakeFolder(source));
+  if (!result.verified || result.fileCount !== 2 || result.folderCount !== 4) throw new Error('CAK baker returned the wrong catalog totals.');
+  if (fs.readFileSync(output).subarray(0, 4).toString('ascii') !== 'FDIR') throw new Error('Output is not a CAK FDIR archive.');
+  console.log(`Aurora Forge CAK baker verification passed (${result.fileCount} files; ${result.folderCount} folders; FDIR catalog reopened).`);
 } finally { fs.rmSync(root, { recursive: true, force: true }); }

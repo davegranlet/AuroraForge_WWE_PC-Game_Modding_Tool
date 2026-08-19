@@ -18,6 +18,7 @@
     byId('ddsChooseOutput').disabled = running;
     byId('ddsChooseReferences').disabled = running;
     byId('ddsRunConversion').textContent = running ? 'Converting…' : 'Convert Files';
+    byId('ddsConvertAll').textContent = running ? 'Converting Folder…' : (state.mode === 'png-to-dds' ? 'Convert a PNG Folder' : 'Convert a DDS Folder');
   }
   function renderInputs() {
     byId('ddsInputList').value = state.inputPaths.length ? state.inputPaths.join('\n') : '';
@@ -28,7 +29,7 @@
     document.querySelector('.dds-reference-field').hidden = !isDdsOutput;
     document.querySelector('.dds-options-panel').hidden = !isDdsOutput;
     byId('ddsChooseInputs').textContent = isDdsOutput ? 'Choose PNG Files' : 'Choose DDS Files';
-    byId('ddsConvertAll').hidden = isDdsOutput;
+    byId('ddsConvertAll').textContent = isDdsOutput ? 'Convert a PNG Folder' : 'Convert a DDS Folder';
     state.inputPaths = [];
     renderInputs();
     byId('ddsConversionResults').innerHTML = '';
@@ -45,12 +46,12 @@
       var result = await desktop().getDdsConverterStatus();
       box.className = 'dds-tool-status ' + (result.ready ? 'ready' : 'missing');
       box.innerHTML = result.ready
-        ? '<strong>texconv ready</strong><span>' + escapeHtml(result.source + ': ' + result.path) + '</span>'
+        ? '<strong>DDS converter ready</strong><span>Button conversion is available. ' + escapeHtml(result.source) + '</span>'
         : '<strong>DDS conversion unavailable</strong><span>' + escapeHtml(result.reason || 'Install Microsoft DirectXTex, then choose texconv.exe in Setup.') + '</span>';
       byId('ddsRunConversion').disabled = !result.ready;
     } catch (error) {
       box.className = 'dds-tool-status missing';
-      box.innerHTML = '<strong>Could not check texconv</strong><span>' + escapeHtml(error.message) + '</span>';
+      box.innerHTML = '<strong>Could not check the DDS converter</strong><span>' + escapeHtml(error.message) + '</span>';
     }
   }
   async function chooseInputs() {
@@ -62,21 +63,26 @@
       status(state.inputPaths.length + ' input file' + (state.inputPaths.length === 1 ? '' : 's') + ' selected.');
     } catch (error) { status('Could not choose files: ' + error.message, true); }
   }
-  async function convertAllDds() {
+  async function convertFolder() {
     if (state.running) return;
     try {
-      if (state.mode !== 'dds-to-png') {
-        state.mode = 'dds-to-png';
-        renderMode();
-      }
-      var result = await desktop().chooseAllDdsInFolder();
+      var result = await desktop().chooseDdsConverterFolder(state.mode);
       if (!result || !result.ok) return;
       state.inputPaths = result.paths || [];
       renderInputs();
-      status(state.inputPaths.length + ' DDS file' + (state.inputPaths.length === 1 ? '' : 's') + ' found. Choose the output folder.');
+      var kind = state.mode === 'png-to-dds' ? 'PNG' : 'DDS';
+      status(state.inputPaths.length + ' ' + kind + ' file' + (state.inputPaths.length === 1 ? '' : 's') + ' found. Choose the output folder.');
       if (!state.outputDir) {
         await chooseOutput();
         if (!state.outputDir) return;
+      }
+      if (state.mode === 'png-to-dds' && !state.referenceFolder && !byId('ddsManualFormat').value) {
+        status('Choose the folder containing the untouched original DDS files. Aurora Forge will match their settings automatically.');
+        await chooseReferences();
+        if (!state.referenceFolder) {
+          status('Folder selected. Choose an original DDS folder or a manual fallback format, then press Convert Files.', true);
+          return;
+        }
       }
       await convert();
     } catch (error) { status('Could not convert the folder: ' + error.message, true); }
@@ -155,7 +161,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.dds-mode-card').forEach(function (button) { button.addEventListener('click', function () { if (!state.running && state.mode !== button.dataset.mode) { state.mode = button.dataset.mode; renderMode(); } }); });
     byId('ddsChooseInputs').addEventListener('click', chooseInputs);
-    byId('ddsConvertAll').addEventListener('click', convertAllDds);
+    byId('ddsConvertAll').addEventListener('click', convertFolder);
     byId('ddsChooseOutput').addEventListener('click', chooseOutput);
     byId('ddsChooseReferences').addEventListener('click', chooseReferences);
     byId('ddsRunConversion').addEventListener('click', convert);

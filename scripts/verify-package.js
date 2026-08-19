@@ -35,10 +35,10 @@ const mainJs = read('electron', 'main.js');
 const preloadJs = read('electron', 'preload.js');
 const guideDataJs = read('app', 'assets', 'js', 'easy-guide-data.js');
 
-ok(pkg.version === '1.6.0-rc.1', 'standards-safe package version is 1.6.0-rc.1');
-ok(lock.version === '1.6.0-rc.1' && lock.packages[''].version === '1.6.0-rc.1', 'package-lock root version matches');
-ok(manifest.release === '1.6.0 RC1' && manifest.releaseTitle === 'Prompt Builder Edition', 'manifest identifies visible Prompt Builder Edition');
-ok(config.release === '1.6.0 RC1' && config.releaseTitle === 'Prompt Builder Edition', 'app config identifies visible Prompt Builder Edition');
+ok(pkg.version === '1.7.0-rc.1', 'standards-safe package version is 1.7.0-rc.1');
+ok(lock.version === '1.7.0-rc.1' && lock.packages[''].version === '1.7.0-rc.1', 'package-lock root version matches');
+ok(manifest.release === '1.7 Major RC1' && manifest.releaseTitle === 'Prompt Builder Edition', 'manifest identifies visible Prompt Builder Edition');
+ok(config.release === '1.7 Major RC1' && config.releaseTitle === 'Prompt Builder Edition', 'app config identifies visible Prompt Builder Edition');
 ok(pkg.devDependencies.electron === '43.2.0', 'Electron is exactly pinned');
 ok(pkg.devDependencies['@electron/packager'] === '20.0.4', 'Electron Packager is exactly pinned');
 ok(pkg.dependencies.three === '0.185.1', 'Three.js is exactly pinned');
@@ -73,7 +73,8 @@ const required = [
   'app/tools/cak-helper/README.txt',
   'electron/cak-reader.js',
   'electron/archive-repackager.js',
-  'electron/archive-repackager.js',
+  'electron/standalone-cak-main.js',
+  'electron/standalone-dds-main.js',
   'tools/AuroraCakHelper/AuroraCakHelper.csproj',
   'tools/AuroraCakHelper/Program.cs',
   'LICENSE',
@@ -160,7 +161,7 @@ ok(!setupHtml.includes('onclick='), 'Setup uses CSP-safe button handlers');
 ok(read('app', 'assets', 'js', 'setup.js').includes('setupCheckEverything') && read('app', 'assets', 'js', 'setup.js').includes('setupSavePreferences'), 'Setup button handlers are registered');
 ok(read('app', 'tool-center.html').includes('url=setup.html#external-programs'), 'old External Tools link redirects to Setup');
 ok(mainJs.includes('projectsFolder') && mainJs.includes('exportsFolder'), 'Electron supports persistent Projects and Exports locations');
-ok(mainJs.includes('Version 1.6.0 RC1'), 'Electron About uses visible release 1.6.0 RC1');
+ok(mainJs.includes('Version 1.7 Major RC1'), 'Electron About uses visible release 1.7 Major RC1');
 ok(!mainJs.includes('toggleDevTools'), 'normal Electron menu does not expose developer tools');
 
 const studiosHtml = read('app', 'creative-studios.html');
@@ -177,7 +178,7 @@ ok(!toolsHtml.includes('tool-center.html'), 'Tools does not treat external progr
 const ddsHtml = read('app', 'dds-converter.html');
 const ddsJs = read('app', 'assets', 'js', 'dds-converter.js');
 ['ddsChooseInputs', 'ddsChooseOutput', 'ddsRunConversion', 'ddsConversionResults'].forEach((id) => ok(ddsHtml.includes(`id="${id}"`), 'DDS Converter contains ' + id));
-['getDdsConverterStatus', 'chooseDdsConverterInputs', 'runDdsConversion', 'openDdsConverterOutput'].forEach((method) => ok(preloadJs.includes(method), 'preload exposes scoped DDS method ' + method));
+['getDdsConverterStatus', 'chooseDdsConverterInputs', 'chooseDdsConverterFolder', 'runDdsConversion', 'openDdsConverterOutput'].forEach((method) => ok(preloadJs.includes(method), 'preload exposes scoped DDS method ' + method));
 ['desktop:dds-converter-status', 'desktop:dds-converter-run', 'inspectDdsFile', 'inspectPngFile', 'Included Microsoft DirectXTex converter'].forEach((token) => ok(mainJs.includes(token), 'Electron DDS backend contains ' + token));
 ['Choose a separate output folder.', 'duplicate names from different folders', 'separate from the original DDS reference folder'].forEach((token) => ok(mainJs.includes(token), 'DDS safety guard contains: ' + token));
 ok(!/require\(['"](?:fs|child_process)['"]\)|electronAPI|ipcRenderer/.test(ddsJs), 'DDS renderer has no direct filesystem, process, or IPC access');
@@ -203,18 +204,19 @@ const normalizedCakNames = Object.values(cakNames).map((name) => name.toLowerCas
 ok(normalizedCakNames.includes('characters/996_roxanne_perez/996_default_attire/996_attire.mtls'), 'catalog retains a verified WWE 2K26 character material-list path');
 ok(normalizedCakNames.some((name) => name.startsWith('cas/')) && normalizedCakNames.some((name) => name.startsWith('arena/')), 'catalog includes newly resolved CAS and arena path families');
 ok(cakReaderJs.includes('variantsFor') && cakReaderJs.includes("/^root\\//i"), 'developer catalog builder safely handles extraction trees wrapped in a Root folder');
-ok(cakHtml.includes('value="resolved"') && cakHtml.includes('Unresolved entries (advanced)'), 'archive page separates ready files from unresolved research entries');
+ok(cakHtml.includes('value="resolved"') && cakHtml.includes('Raw hashes / external references'), 'archive page separates ready files from raw hashes and external references');
 ok(cakReaderJs.includes("options.scope) ? options.scope : 'resolved'"), 'archive searches default to real-path files only');
-ok(mainJs.includes('does not have a verified path in this Aurora Forge release'), 'normal extraction blocks unresolved hash-name entries and directs users to catalog updates');
+ok(cakReaderJs.includes("file.availability = file.extractable ? (file.nameResolved ? 'ready' : 'raw-hash') : 'external-reference'"), 'archive reader distinguishes ready files, raw-hash payloads, and external references');
+ok(cakReaderJs.includes('Unresolved/${path.basename') && cakReaderJs.includes('safeGeneratedName(file)'), 'unnamed payloads receive safe archive-scoped generated paths');
 ok(!mainJs.includes('findExistingExtractRoots'), 'archive opening never auto-scans a large extracted-files tree');
 ok(mainJs.includes('currentCakSession = cakReader.openArchive(selected, readCakDictionary())'), 'archive opening uses the bundled dictionary immediately');
 ok(!mainJs.includes('cakDictionaryPath') && !mainJs.includes('writeCakDictionary'), 'runtime catalog cannot be overridden by stale local name data');
 ok(!mainJs.includes('desktop:cak-explorer-build-dictionary'), 'Electron exposes no end-user extraction-tree scanner');
 ok(!preloadJs.includes('buildCakNameDictionary') && !cakJs.includes('cakBuildNames') && !cakHtml.includes('cakBuildNames'), 'archive interface exposes no end-user name-learning workflow');
 ok(!setupHtml.includes('crossGenerationGrid') && !read('app', 'assets', 'js', 'tool-center.js').includes('extracts26'), 'Setup does not ask users for extracted game folders');
-ok(cakHtml.includes('catalog update supplies them'), 'archive page explains release-managed name updates');
+ok(cakHtml.includes('external reference cannot be extracted'), 'archive page explains why zero-payload external references cannot be extracted');
 ok(cakHtml.includes('id="cakDevDetails" hidden'), 'normal archive page keeps technical session details out of view');
-ok(cakJs.includes('item.nameResolved') && cakJs.includes('real filename before extraction'), 'archive interface disables unresolved selections');
+ok(cakJs.includes('box.disabled = item.extractable === false') && cakJs.includes('(raw hash name)'), 'archive interface permits raw-hash payloads and disables only zero-payload references');
 
 const faqHtml = read('app', 'faq.html');
 ok(faqHtml.includes('Is Aurora Forge an AI chatbot?') && faqHtml.includes('Does Aurora Forge generate the finished artwork?'), 'FAQ explains the prompt-generator boundary');
@@ -228,7 +230,7 @@ ok(tutorialsHtml.includes('Aurora_Forge_Reader_Handbook.docx'), 'Tutorials provi
 ok(tutorialsHtml.includes('complete-character-modding-guide.html') && tutorialsHtml.includes('DDS ↔ PNG Without Photoshop'), 'Tutorials links the complete character and texconv paths');
 const completeGuideHtml = read('app', 'complete-character-modding-guide.html');
 ['Install CakeHook', 'Install and connect CakeView', 'Install and connect Tribute 26', 'Convert DDS and PNG without Photoshop', 'Add the moveset', 'Add entrance, victory, music, and graphics', 'Make the first manual bake', 'Test the whole character'].forEach((phrase) => ok(completeGuideHtml.includes(phrase), 'complete character guide includes: ' + phrase));
-ok(completeGuideHtml.includes('Microsoft.DirectXTex.Texconv') && completeGuideHtml.includes('BC7_UNORM') && completeGuideHtml.includes('exact matching format'), 'DDS tutorial installs texconv and teaches target-format matching');
+ok(completeGuideHtml.includes('Convert a DDS Folder') && completeGuideHtml.includes('Convert a PNG Folder') && completeGuideHtml.includes('same-name original DDS files') && !completeGuideHtml.includes('winget install Microsoft.DirectXTex'), 'DDS tutorial uses button conversion and teaches target-format matching without command-line setup');
 ok(guideDataJs.includes("id: 'dds-without-photoshop'"), 'Easy lessons include Photoshop-free DDS conversion');
 const handbookHtml = read('app', 'handbook-reader.html');
 const handbookPdf = fs.readFileSync(path.join(appRoot, 'downloads', 'Aurora_Forge_Reader_Handbook.pdf'));
@@ -279,12 +281,13 @@ ok(read('app', 'assets', 'js', 'easy-guide.js').includes('visualCard') && read('
 });
 
 const aboutHtml = read('app', 'about.html');
-ok(aboutHtml.includes('v1.6.0 RC1'), 'About displays visible version 1.6.0 RC1');
+ok(aboutHtml.includes('v1.7 Major RC1'), 'About displays visible version 1.7 Major RC1');
 ok(aboutHtml.includes('Microsoft DirectXTex') && aboutHtml.includes('MIT License'), 'About credits the bundled open-source converter');
 ok(aboutHtml.includes('extraction helper') && aboutHtml.includes('MIT License'), 'About identifies the source-available extraction helper');
 ok(!normalHtmlFiles.some((file) => /internal production notes/i.test(read('app', file))), 'public app contains no internal production notes');
 ok(pkg.license === 'MIT' && read('LICENSE').includes('MIT License'), 'Aurora Forge is published under the MIT License');
-ok(cakHtml.includes('id="repackBuild"') && preloadJs.includes('buildRepackPackage') && mainJs.includes('archiveRepackager.buildPackage'), 'Game Archive Explorer includes the verified project repackager');
+ok(cakHtml.includes('id="repackBuild"') && cakHtml.includes('Build New CAK') && preloadJs.includes('verifyRepackPackage') && mainJs.includes('archiveRepackager.buildCak'), 'Game Archive Explorer includes the CAK baker and verification controls');
+ok(cakHtml.includes('id="cakBrowseAll"') && cakHtml.includes('Open All Game CAKs') && cakJs.includes("openArchive('all-archives')") && preloadJs.includes('openAllCakArchives') && mainJs.includes("desktop:cak-explorer-open-all"), 'Game Archive Explorer opens every CAK in the configured game folder as one browser');
 
 ok(mainJs.includes('contextIsolation: true') && mainJs.includes('sandbox: true') && mainJs.includes('nodeIntegration: false'), 'Electron renderer security settings are enabled');
 ok(!preloadJs.includes('require(\'fs\')') && !preloadJs.includes('require("fs")'), 'preload exposes no direct filesystem module');
@@ -323,6 +326,7 @@ const syntaxFiles = [
   'scripts/verify-dds-converter.js'
   ,'scripts/verify-cak-extraction.js'
   ,'scripts/verify-repackager.js'
+  ,'scripts/build-standalone-windows.js'
   ,'scripts/build-cross-generation-path-catalog.js'
   ,'scripts/audit-extracted-layouts.js'
 ];
@@ -336,4 +340,4 @@ if (failures) {
   console.error(`\nAurora Forge verification failed with ${failures} problem(s).`);
   process.exit(1);
 }
-console.log('\nAurora Forge v1.6.0 RC1 source verification passed.');
+console.log('\nAurora Forge v1.7 Major RC1 source verification passed.');
