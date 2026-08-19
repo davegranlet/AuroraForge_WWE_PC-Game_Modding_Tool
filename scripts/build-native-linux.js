@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const root = path.join(__dirname, '..');
 const appFolder = path.join(root, 'dist', 'Aurora Forge-linux-x64');
 const releaseDir = path.join(root, 'portable-release');
-const archiveName = 'AF-160-RC1-Linux-x64.tar.gz';
+const archiveName = 'Aurora-Forge-1.7Major-RC1-Linux-x64.tar.gz';
 const archivePath = path.join(releaseDir, archiveName);
 
 function run(command, args) {
@@ -23,10 +23,10 @@ function run(command, args) {
 
 run(process.execPath, ['scripts/prepare-runtime-staging.js']);
 const packager = path.join(root, 'node_modules', '.bin', process.platform === 'win32' ? 'electron-packager.cmd' : 'electron-packager');
-run(packager, ['build/runtime-staging', 'Aurora Forge', '--platform=linux', '--arch=x64', '--out=dist', '--overwrite', '--asar.unpackDir=app/tools', '--icon=app/assets/img/app-icon-256.png', '--app-version=1.6.0', '--build-version=1.6.0']);
+run(packager, ['build/runtime-staging', 'Aurora Forge', '--platform=linux', '--arch=x64', '--out=dist', '--overwrite', '--asar.unpackDir=app/tools', '--icon=app/assets/img/app-icon-256.png', '--app-version=1.7.0', '--build-version=1.7.0']);
 
 const readme = [
-  'Aurora Forge 1.6.0 RC1 — Native Linux x64', '',
+  'Aurora Forge 1.7 Major RC1 — Native Linux x64', '',
   'Run:', '  ./aurora-forge', '',
   'If your file manager removed the executable permission:', '  chmod +x aurora-forge', '',
   'Aurora Forge is a WWE 2K26 prompt generator and workflow-preparation workspace.',

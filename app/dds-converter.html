@@ -24,13 +24,13 @@
     <div class="app-sidebar-card"><div class="mini-label">DDS Converter</div><strong>Choose · Match · Convert</strong><span>Keep originals in a separate folder.</span></div>
   </aside>
   <main class="app-main">
-    <section class="app-topbar"><div><div class="eyebrow">Aurora Forge · Tools</div><h1>DDS Converter</h1><p class="sub">Convert DDS and PNG files in batches with Microsoft DirectXTex texconv.</p></div></section>
+    <section class="app-topbar"><div><div class="eyebrow">Aurora Forge · Tools</div><h1>DDS Converter</h1><p class="sub">Convert DDS and PNG files with buttons—no command-line entries required.</p></div></section>
     <div class="wrap app-wrap">
       <section class="ai-hero hero-glow app-hero dds-converter-hero">
         <div class="part-label">Automatic texture conversion</div>
         <h2>DDS and PNG without Photoshop</h2>
-        <p>Choose files, choose a separate output folder, and convert them immediately with the included Microsoft DirectXTex utility. For PNG to DDS, the safest mode automatically matches same-name original DDS files.</p>
-        <div id="ddsToolStatus" class="dds-tool-status"><strong>Checking texconv…</strong><span></span></div>
+        <p>Choose individual files or press <b>Convert a Folder</b>. Aurora Forge handles the converter commands internally. For PNG to DDS, the safest mode automatically matches same-name original DDS files.</p>
+        <div id="ddsToolStatus" class="dds-tool-status"><strong>Checking the included converter…</strong><span></span></div>
         <div class="ai-actions"><a class="ai-btn secondary" href="tutorials.html#dds-without-photoshop">Open Tutorial</a><a class="ai-btn secondary" href="setup.html#external-programs">Optional Converter Override</a></div>
       </section>
 
@@ -45,7 +45,7 @@
       <section class="ai-panel app-panel">
         <div class="section-label" style="margin-top:0;">2. Files and folders</div>
         <div class="dds-converter-grid">
-          <div class="ai-field dds-wide-field"><label for="ddsInputList">Input files</label><textarea id="ddsInputList" readonly placeholder="No files selected"></textarea><div class="ai-actions"><button id="ddsChooseInputs" class="ai-btn secondary" type="button">Choose DDS Files</button><button id="ddsConvertAll" class="ai-btn" type="button">Convert All DDS in Folder</button></div></div>
+          <div class="ai-field dds-wide-field"><label for="ddsInputList">Input files</label><textarea id="ddsInputList" readonly placeholder="No files selected"></textarea><div class="ai-actions"><button id="ddsChooseInputs" class="ai-btn secondary" type="button">Choose DDS Files</button><button id="ddsConvertAll" class="ai-btn" type="button">Convert a DDS Folder</button></div><small>The folder button asks where to save the results, then starts the conversion automatically.</small></div>
           <div class="ai-field"><label for="ddsOutputFolder">Separate output folder</label><input id="ddsOutputFolder" readonly placeholder="Choose where converted files will be written"><button id="ddsChooseOutput" class="ai-btn secondary" type="button">Choose Output Folder</button></div>
           <div class="ai-field dds-reference-field" hidden><label for="ddsReferenceFolder">Original DDS folder for automatic matching</label><input id="ddsReferenceFolder" readonly placeholder="Recommended: folder containing untouched originals"><button id="ddsChooseReferences" class="ai-btn secondary" type="button">Choose Original DDS Folder</button><small>Aurora Forge matches each PNG to a same-name DDS and copies its format, dimensions, and mipmap count.</small></div>
         </div>

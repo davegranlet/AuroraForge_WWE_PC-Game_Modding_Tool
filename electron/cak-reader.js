@@ -299,9 +299,10 @@ function openArchive(archivePath, dictionary = {}) {
     }
     for (const file of fileTable.files) {
       const knownName = dictionary[file.hash];
-      file.name = knownName && !path.isAbsolute(knownName) && !knownName.split(/[\\/]/).includes('..') ? knownName.replace(/\\/g, '/') : safeGeneratedName(file);
+      file.name = knownName && !path.isAbsolute(knownName) && !knownName.split(/[\\/]/).includes('..') ? knownName.replace(/\\/g, '/') : `Unresolved/${path.basename(resolved, path.extname(resolved))}/${safeGeneratedName(file)}`;
       file.nameResolved = Boolean(knownName);
       file.folderName = folderTable.folders[file.folderIndex] && folderTable.folders[file.folderIndex].name || '';
+      file.availability = file.extractable ? (file.nameResolved ? 'ready' : 'raw-hash') : 'external-reference';
     }
     return {
       archivePath: resolved, archiveName: path.basename(resolved), archiveSize, magic, key: keyResult.key,
@@ -316,7 +317,10 @@ function publicSummary(session) {
   const totalExpanded = session.files.reduce((sum, file) => sum + file.expandedSize, 0);
   const resolvedNames = session.files.filter((file) => file.nameResolved).length;
   const resolvedFolders = session.folders.filter((folder) => folder.nameResolved).length;
-  return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: session.files.length - resolvedNames, resolvedFolders, keyRecovered: session.keyRecovered, warnings: session.warnings };
+  const readyFiles = session.files.filter((file) => file.nameResolved && file.extractable).length;
+  const rawHashPayloads = session.files.filter((file) => !file.nameResolved && file.extractable).length;
+  const externalReferences = session.files.filter((file) => !file.extractable).length;
+  return { archiveName: session.archiveName, archivePath: session.archivePath, archiveSize: session.archiveSize, fileCount: session.files.length, folderCount: session.folders.length, totalExpanded, resolvedNames, unresolvedNames: session.files.length - resolvedNames, resolvedFolders, readyFiles, rawHashPayloads, externalReferences, keyRecovered: session.keyRecovered, warnings: session.warnings };
 }
 
 function searchFiles(session, options = {}) {
@@ -325,7 +329,7 @@ function searchFiles(session, options = {}) {
   const scope = ['resolved', 'unresolved', 'all'].includes(options.scope) ? options.scope : 'resolved';
   const pageSize = Math.min(250, Math.max(10, Number(options.pageSize) || 100));
   const page = Math.max(0, Number(options.page) || 0);
-  const filtered = session.files.filter((file) => (scope === 'all' || (scope === 'resolved' ? file.nameResolved : !file.nameResolved)) && (!query || file.name.toLowerCase().includes(query) || file.hash.includes(query) || file.type.includes(query)) && (!type || file.type === type));
+  const filtered = session.files.filter((file) => (scope === 'all' || (scope === 'resolved' ? file.nameResolved : !file.nameResolved)) && (!query || file.name.toLowerCase().includes(query) || String(file.hash || '').includes(query) || file.type.includes(query)) && (!type || file.type === type));
   const items = filtered.slice(page * pageSize, (page + 1) * pageSize).map(({ chunks, flags, ...file }) => file);
   return { items, total: filtered.length, page, pageSize, pages: Math.max(1, Math.ceil(filtered.length / pageSize)), types: [...new Set(session.files.map((file) => file.type).filter(Boolean))].sort() };
 }

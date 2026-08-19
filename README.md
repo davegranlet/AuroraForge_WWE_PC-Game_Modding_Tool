@@ -1,5 +1,7 @@
 # Aurora Forge
 
+Build instructions: see [BUILDING.md](BUILDING.md).
+
 Aurora Forge is a local WWE 2K26 prompt generator and workflow-preparation workspace.
 
 You choose or describe what you want to create. Aurora Forge turns those choices into structured instructions, reference notes, project files, and handoff packs. You then decide which compatible AI or image tool will carry out the request.
@@ -49,4 +51,4 @@ The Linux edition natively supports prompt building, projects, saving/export, re
 
 Aurora Forge is open source under the MIT License. The Windows extraction helper is built from the source in `tools/AuroraCakHelper/`; the game-owned decompression library is never bundled.
 
-See [RELEASE_NOTES_1.6.0_RC1.md](RELEASE_NOTES_1.6.0_RC1.md) and [FAQ.md](FAQ.md) for the current release details.
+See [RELEASE_NOTES_1.7_MAJOR_RC1.md](RELEASE_NOTES_1.7_MAJOR_RC1.md) and [FAQ.md](FAQ.md) for the current release details.

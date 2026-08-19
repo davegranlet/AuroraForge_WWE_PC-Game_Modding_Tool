@@ -92,7 +92,7 @@
     if (!requireDesktop()) return;
     try {
       var text = [
-        'Aurora Forge Note â€” 1.6.0 RC1',
+        'Aurora Forge Note â€” 1.7 Major RC1',
         'Project: ' + (value('desktopProjectName') || 'New Luchador Mask Project'),
         'Type: ' + (value('desktopProjectType') || 'lmask'),
         '',

@@ -1,5 +1,5 @@
 {
-  "release": "1.6.0 RC1",
+  "release": "1.7 Major RC1",
   "releaseTitle": "Prompt Builder Edition",
   "distributionGoal": "windows_x64_zip_and_linux_x64_tar_gz",
   "primaryNavigation": [
@@ -43,7 +43,7 @@
     {"id":"character_viewer","status":"available","boundary":"User-imported OBJ and image preview only; no game assets are bundled, extracted, or written."},
     {"id":"tutorial_center","status":"available","boundary":"Beginner lessons, animated videos, searchable in-app handbook, and source-linked reader editions."},
     {"id":"cak_explorer","status":"available","boundary":"Read-only WWE 2K26 CAK catalog browsing and selected-file extraction to a separate user-chosen folder; never writes into game archives."},
-    {"id":"repackager","status":"available","boundary":"Builds a deterministic, checksum-verified ZIP from a user-selected mod-project folder; never creates, replaces, or edits a game CAK."}
+    {"id":"repackager","status":"available","boundary":"Builds and verifies a new CAK from a user-selected BakeMe folder; never replaces or edits an installed game CAK."}
   ],
   "expectedLmaskOutputs": ["mask_color.png","mask_mask1.png","mask_nrm.png"],
   "releaseHighlights": [
@@ -53,7 +53,7 @@
     "All valid path hashes in the 15 installed archives used for RC1 verification are resolved",
     "Archive names are maintained by Aurora Forge releases; end users never scan an extracted game folder",
     "Archive opening uses the bundled catalog immediately and cannot be overridden by stale local name data",
-    "Ready-files view that preserves understandable Windows folders and blocks unresolved hash dumps",
+    "Ready-files view plus safe hash-named extraction for payloads whose original paths are unknown",
     "Extraction limits, path protections, collision control, and a saved result report",
     "Automatic batch DDS and PNG converter with original-texture format, dimension, and mipmap matching",
     "Guided WWE 2K26 prompt builders with editable project inputs and complete handoff-pack exports",

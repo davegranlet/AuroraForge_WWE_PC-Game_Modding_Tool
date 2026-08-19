@@ -1,7 +1,7 @@
 {
   "name": "aurora-forge",
-  "version": "1.6.0-rc.1",
-  "description": "Aurora Forge 1.6.0 RC1: a portable WWE 2K26 prompt-building and workflow-preparation workspace with guided prompt builders, handoff packs, project tools, validation, tutorials, conversion, and read-only inspection.",
+  "version": "1.7.0-rc.1",
+  "description": "Aurora Forge Release 1.7 Major RC1: a portable WWE 2K26 prompt-building and workflow-preparation workspace with guided prompt builders, handoff packs, project tools, validation, extraction, repackaging, and conversion.",
   "main": "electron/main.js",
   "private": true,
   "author": "VikingStudios",
@@ -15,8 +15,9 @@
     "catalog:audit": "node scripts/audit-extracted-layouts.js",
     "prepare:runtime": "node scripts/prepare-runtime-staging.js",
     "clean:dist": "node scripts/clean-dist.js",
-    "pack:win": "electron-packager build/runtime-staging \"Aurora Forge\" --platform=win32 --arch=x64 --out=dist --overwrite --asar.unpackDir=app/tools --icon=app/assets/img/app-icon.ico --app-version=1.6.0 --build-version=1.6.0",
-    "pack:linux": "electron-packager build/runtime-staging \"Aurora Forge\" --platform=linux --arch=x64 --out=dist --overwrite --asar.unpackDir=app/tools --icon=app/assets/img/app-icon-256.png --app-version=1.6.0 --build-version=1.6.0",
+    "pack:win": "electron-packager build/runtime-staging \"Aurora Forge\" --platform=win32 --arch=x64 --out=dist --overwrite --asar.unpackDir=app/tools --icon=app/assets/img/app-icon.ico --app-version=1.7.0 --build-version=1.7.0",
+    "pack:linux": "electron-packager build/runtime-staging \"Aurora Forge\" --platform=linux --arch=x64 --out=dist --overwrite --asar.unpackDir=app/tools --icon=app/assets/img/app-icon-256.png --app-version=1.7.0 --build-version=1.7.0",
+    "build:standalones": "node scripts/build-standalone-windows.js",
     "build:portable": "node scripts/build-true-portable-windows.js",
     "build:linux": "node scripts/build-native-linux.js",
     "verify:portable": "node scripts/verify-final-portable.js",
@@ -29,7 +30,7 @@
   },
   "packageManager": "npm@11.16.0",
   "extraMetadata": {
-    "version": "1.6.0-rc.1"
+    "version": "1.7.0-rc.1"
   },
   "dependencies": {
     "three": "0.185.1"

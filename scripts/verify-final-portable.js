@@ -4,7 +4,7 @@ const cp = require('child_process');
 
 const root = path.join(__dirname, '..');
 const appFolder = path.join(root, 'dist', 'Aurora Forge-win32-x64');
-const zipPath = path.join(root, 'portable-release', 'AF-160-RC1-Windows-x64.zip');
+const zipPath = path.join(root, 'portable-release', 'Aurora-Forge-1.7Major-RC1-Windows-x64.zip');
 const asarPath = path.join(appFolder, 'resources', 'app.asar');
 const unpackedTools = path.join(appFolder, 'resources', 'app.asar.unpacked', 'app', 'tools');
 

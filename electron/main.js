@@ -7,9 +7,12 @@ const cakReader = require('./cak-reader');
 const archiveRepackager = require('./archive-repackager');
 
 const APP_ROOT = path.join(__dirname, '..', 'app');
+const START_PAGE = process.env.AURORA_START_PAGE || 'index.html';
+const WINDOW_TITLE = process.env.AURORA_WINDOW_TITLE || 'Aurora Forge';
 const DEFAULT_PROJECTS_DIR_NAME = 'Aurora Forge Projects';
 const DEFAULT_EXPORTS_DIR_NAME = 'Aurora Forge Exports';
 let lastDdsConverterOutputDir = '';
+let lastBuiltCakPath = '';
 let currentCakSession = null;
 let lastCakOutputDir = '';
 const DDS_FORMATS = Object.freeze({
@@ -304,6 +307,7 @@ function registerAppProtocol() {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
+    title: WINDOW_TITLE,
     width: 1280,
     height: 900,
     minWidth: 960,
@@ -319,7 +323,7 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadURL('wwe2k26://app/index.html');
+  mainWindow.loadURL(`wwe2k26://app/${START_PAGE}`);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^(https?:|mailto:)/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
@@ -357,7 +361,7 @@ function createWindow() {
       submenu: [
         { label: 'Tutorials', click: () => mainWindow.loadURL('wwe2k26://app/tutorials.html') },
         { type: 'separator' },
-        { label: 'About', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'About Aurora Forge', message: 'Aurora Forge', detail: 'Version 1.6.0 RC1 · Prompt Builder Edition\nA WWE 2K26 prompt-building and workflow-preparation workspace. Aurora Forge prepares prompts and handoff packs; your chosen AI creates the result.' }) }
+        { label: 'About', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'About Aurora Forge', message: 'Aurora Forge', detail: 'Version 1.7 Major RC1 · Prompt Builder Edition\nA WWE 2K26 prompt-building and workflow-preparation workspace. Aurora Forge prepares prompts and handoff packs; your chosen AI creates the result.' }) }
       ]
     }
   ];
@@ -519,6 +523,44 @@ ipcMain.handle('desktop:cak-explorer-open', async (_event, archivePath) => {
   return { ok: true, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'resolved' }) };
 });
 
+ipcMain.handle('desktop:cak-explorer-open-all', async () => {
+  const gameFolder = readToolConfig().gameFolder || '';
+  if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) throw new Error('Choose the WWE 2K26 game folder in Setup first.');
+  const archivePaths = fs.readdirSync(gameFolder, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.cak$/i.test(entry.name))
+    .map((entry) => path.join(gameFolder, entry.name))
+    .sort((left, right) => path.basename(left).localeCompare(path.basename(right), undefined, { numeric: true }));
+  if (!archivePaths.length) throw new Error('No .cak archives were found in the configured WWE 2K26 game folder.');
+  const dictionary = readCakDictionary();
+  const sessions = archivePaths.map((archivePath) => cakReader.openArchive(archivePath, dictionary));
+  const files = [];
+  const folders = [];
+  for (const session of sessions) {
+    const folderOffset = folders.length;
+    folders.push(...session.folders.map((folder) => ({ ...folder, archiveName: session.archiveName })));
+    for (const file of session.files) files.push({
+      ...file,
+      id: files.length,
+      sourceId: file.id,
+      sourceArchivePath: session.archivePath,
+      sourceArchiveName: session.archiveName,
+      sourceArchiveKey: session.key,
+      folderIndex: folderOffset + file.folderIndex
+    });
+  }
+  currentCakSession = {
+    archiveName: `All ${sessions.length} game archives`,
+    archivePath: gameFolder,
+    archiveSize: sessions.reduce((sum, session) => sum + session.archiveSize, 0),
+    files,
+    folders,
+    sessions,
+    keyRecovered: sessions.some((session) => session.keyRecovered),
+    warnings: sessions.flatMap((session) => session.warnings.map((warning) => `${session.archiveName}: ${warning}`))
+  };
+  return { ok: true, archiveCount: sessions.length, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'all' }) };
+});
+
 ipcMain.handle('desktop:cak-explorer-search', async (_event, options) => {
   if (!currentCakSession) throw new Error('Open a CAK archive first.');
   return cakReader.searchFiles(currentCakSession, options || {});
@@ -546,7 +588,6 @@ ipcMain.handle('desktop:cak-explorer-extract', async (_event, payload) => {
   if (config.gameFolder && (outputRoot.toLowerCase() === path.resolve(config.gameFolder).toLowerCase() || outputRoot.toLowerCase().startsWith(path.resolve(config.gameFolder).toLowerCase() + path.sep))) throw new Error('Extraction into the game folder is blocked.');
   const files = ids.map((id) => currentCakSession.files[id]).filter(Boolean);
   if (files.length !== ids.length) throw new Error('One or more selected entries no longer exist. Reopen the archive.');
-  if (files.some((file) => !file.nameResolved)) throw new Error('This archive entry does not have a verified path in this Aurora Forge release. Install a newer Aurora Forge catalog update when one becomes available.');
   if (files.some((file) => !file.extractable)) throw new Error('One or more selected catalog entries store their payload in another archive and cannot be extracted from this CAK alone.');
   const totalBytes = files.reduce((sum, file) => sum + file.expandedSize, 0);
   if (!(payload && payload.all) && totalBytes > 20 * 1024 * 1024 * 1024) throw new Error('This extraction job is larger than 20 GB. Choose a smaller group.');
@@ -555,37 +596,46 @@ ipcMain.handle('desktop:cak-explorer-extract', async (_event, payload) => {
     const freeBytes = Number(storage.bavail) * Number(storage.bsize);
     if (freeBytes < totalBytes + 64 * 1024 * 1024) throw new Error('The output drive does not have enough free space for this extraction job.');
   }
-  const oodlePath = resolveOodlePath(currentCakSession.archivePath);
+  const oodlePath = resolveOodlePath(files[0].sourceArchivePath || currentCakSession.archivePath);
   if (files.some((file) => file.compressed) && !oodlePath) throw new Error('oo2core_9_win64.dll was not found. Choose the WWE 2K26 game folder in Setup.');
   const helper = cakHelperPath();
   if (!fs.existsSync(helper)) throw new Error('The included Aurora Forge extraction helper is missing.');
-  const request = {
-    archivePath: currentCakSession.archivePath,
-    oodlePath,
-    outputRoot,
-    archiveKey: currentCakSession.key,
-    overwrite: Boolean(payload && payload.overwrite),
-    entries: files.map((file) => ({ id: file.id, offset: Number(file.offset), storedSize: file.storedSize, expandedSize: file.expandedSize, compressed: file.compressed, protected: file.protected, relativePath: file.name }))
-  };
-  const requestPath = path.join(app.getPath('temp'), `aurora-cak-${process.pid}-${Date.now()}.json`);
-  fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
-  try {
-    const run = await runNativeProcess(helper, [requestPath]);
-    let parsed;
-    try { parsed = JSON.parse(String(run.stdout || '').trim()); } catch (_error) { throw new Error((run.stderr || run.stdout || 'The extraction helper returned no readable report.').trim()); }
-    const results = (parsed.results || []).map((item) => ({ ok: Boolean(item.Ok), id: item.Id, path: item.Path || '', bytes: item.Bytes || 0, error: item.Error || '' }));
+  const groups = new Map();
+  for (const file of files) {
+    const archivePath = file.sourceArchivePath || currentCakSession.archivePath;
+    if (!groups.has(archivePath)) groups.set(archivePath, []);
+    groups.get(archivePath).push(file);
+  }
+  const results = [];
+  for (const [archivePath, archiveFiles] of groups) {
+    const request = {
+      archivePath,
+      oodlePath: resolveOodlePath(archivePath),
+      outputRoot,
+      archiveKey: archiveFiles[0].sourceArchiveKey === undefined ? currentCakSession.key : archiveFiles[0].sourceArchiveKey,
+      overwrite: Boolean(payload && payload.overwrite),
+      entries: archiveFiles.map((file) => ({ id: file.sourceId === undefined ? file.id : file.sourceId, offset: Number(file.offset), storedSize: file.storedSize, expandedSize: file.expandedSize, compressed: file.compressed, protected: file.protected, relativePath: file.name }))
+    };
+    const requestPath = path.join(app.getPath('temp'), `aurora-cak-${process.pid}-${Date.now()}-${results.length}.json`);
+    fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
+    try {
+      const run = await runNativeProcess(helper, [requestPath]);
+      let parsed;
+      try { parsed = JSON.parse(String(run.stdout || '').trim()); } catch (_error) { throw new Error((run.stderr || run.stdout || 'The extraction helper returned no readable report.').trim()); }
+      results.push(...(parsed.results || []).map((item) => ({ ok: Boolean(item.Ok), id: item.Id, archive: path.basename(archivePath), path: item.Path || '', bytes: item.Bytes || 0, error: item.Error || '' })));
+    } finally { try { fs.unlinkSync(requestPath); } catch (_error) {} }
+  }
     const succeeded = results.filter((item) => item.ok).length;
     lastCakOutputDir = outputRoot;
     const report = [
       'Aurora Forge CAK Extraction Report', '',
-      'Archive: ' + currentCakSession.archivePath,
+      'Archive source: ' + currentCakSession.archivePath,
       'Output: ' + outputRoot,
       `Requested: ${files.length}`, `Succeeded: ${succeeded}`, `Failed: ${results.length - succeeded}`, '',
-      ...results.map((item) => item.ok ? `OK  ${item.id}  ${item.bytes} bytes  ${item.path}` : `FAILED  ${item.id}  ${item.error}`)
+      ...results.map((item) => item.ok ? `OK  ${item.archive || currentCakSession.archiveName}  ${item.id}  ${item.bytes} bytes  ${item.path}` : `FAILED  ${item.archive || currentCakSession.archiveName}  ${item.id}  ${item.error}`)
     ].join('\n');
     fs.writeFileSync(path.join(outputRoot, 'Aurora_Forge_Extraction_Report.txt'), report + '\n', 'utf8');
     return { ok: succeeded === results.length, succeeded, failed: results.length - succeeded, total: results.length, outputRoot, results };
-  } finally { try { fs.unlinkSync(requestPath); } catch (_error) {} }
 });
 
 ipcMain.handle('desktop:cak-explorer-open-output', async () => {
@@ -595,16 +645,29 @@ ipcMain.handle('desktop:cak-explorer-open-output', async () => {
 });
 
 ipcMain.handle('desktop:repackager-choose-source', async () => {
-  const result = await dialog.showOpenDialog({ title: 'Choose the extracted mod-project folder', properties: ['openDirectory'] });
+  const result = await dialog.showOpenDialog({ title: 'Choose the BakeMe folder to package', properties: ['openDirectory'] });
   return result.canceled || !result.filePaths.length ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
 });
 
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   const source = path.resolve(String(sourceRoot || ''));
-  if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable source folder first.');
-  const result = await dialog.showSaveDialog({ title: 'Save Aurora Forge mod package', defaultPath: path.basename(source) + '.zip', filters: [{ name: 'ZIP package', extensions: ['zip'] }] });
+  if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable BakeMe folder first.');
+  const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
   if (result.canceled || !result.filePath) return { ok: false };
-  return { ok: true, ...archiveRepackager.buildPackage(source, result.filePath) };
+  const built = archiveRepackager.buildCak(source, result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak');
+  lastBuiltCakPath = built.outputPath;
+  return { ok: true, ...built };
+});
+
+ipcMain.handle('desktop:repackager-verify', async () => {
+  if (!lastBuiltCakPath || !fs.existsSync(lastBuiltCakPath)) throw new Error('Build a new CAK first.');
+  return { ok: true, ...archiveRepackager.verifyCak(lastBuiltCakPath), outputPath: lastBuiltCakPath };
+});
+
+ipcMain.handle('desktop:repackager-open-output', async () => {
+  if (!lastBuiltCakPath || !fs.existsSync(lastBuiltCakPath)) throw new Error('Build a new CAK first.');
+  const error = await shell.openPath(path.dirname(lastBuiltCakPath));
+  return { ok: !error, error };
 });
 
 ipcMain.handle('desktop:dds-converter-choose-inputs', async (_event, mode) => {
@@ -620,18 +683,20 @@ ipcMain.handle('desktop:dds-converter-choose-inputs', async (_event, mode) => {
   return { ok: true, paths, names: paths.map((item) => path.basename(item)) };
 });
 
-ipcMain.handle('desktop:dds-converter-choose-all-dds', async () => {
+ipcMain.handle('desktop:dds-converter-choose-folder', async (_event, mode) => {
+  const normalizedMode = mode === 'png-to-dds' ? 'png-to-dds' : 'dds-to-png';
+  const extension = normalizedMode === 'png-to-dds' ? 'png' : 'dds';
   const result = await dialog.showOpenDialog({
-    title: 'Choose a folder containing DDS files',
+    title: `Choose a folder containing ${extension.toUpperCase()} files`,
     properties: ['openDirectory']
   });
   if (result.canceled || !result.filePaths.length) return { ok: false };
   const folder = path.resolve(result.filePaths[0]);
   const paths = fs.readdirSync(folder, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /\.dds$/i.test(entry.name))
+    .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.' + extension)
     .map((entry) => path.join(folder, entry.name))
     .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }));
-  if (!paths.length) throw new Error('No DDS files were found in that folder.');
+  if (!paths.length) throw new Error(`No ${extension.toUpperCase()} files were found in that folder.`);
   return { ok: true, folder, paths, names: paths.map((item) => path.basename(item)) };
 });
 
@@ -775,7 +840,7 @@ ipcMain.handle('desktop:create-project-folder', async (_event, payload) => {
   folders.forEach((folder) => ensureDir(path.join(projectPath, folder)));
   const project = {
     app: 'Aurora Forge',
-    release: '1.6.0 RC1 Prompt Builder Edition',
+    release: '1.7 Major RC1 Prompt Builder Edition',
     name: projectName,
     type: projectType,
     notes: payload && payload.notes ? payload.notes : '',

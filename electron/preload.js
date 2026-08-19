@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   checkCakeHook: () => ipcRenderer.invoke('desktop:check-cakehook'),
   getDdsConverterStatus: () => ipcRenderer.invoke('desktop:dds-converter-status'),
   chooseDdsConverterInputs: (mode) => ipcRenderer.invoke('desktop:dds-converter-choose-inputs', mode),
-  chooseAllDdsInFolder: () => ipcRenderer.invoke('desktop:dds-converter-choose-all-dds'),
+  chooseDdsConverterFolder: (mode) => ipcRenderer.invoke('desktop:dds-converter-choose-folder', mode),
   chooseDdsConverterOutput: () => ipcRenderer.invoke('desktop:dds-converter-choose-output'),
   chooseDdsReferenceFolder: () => ipcRenderer.invoke('desktop:dds-converter-choose-reference-folder'),
   runDdsConversion: (payload) => ipcRenderer.invoke('desktop:dds-converter-run', payload),
@@ -25,10 +25,13 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,getCakExplorerStatus: () => ipcRenderer.invoke('desktop:cak-explorer-status')
   ,chooseCakArchive: () => ipcRenderer.invoke('desktop:cak-explorer-choose-archive')
   ,openCakArchive: (archivePath) => ipcRenderer.invoke('desktop:cak-explorer-open', archivePath)
+  ,openAllCakArchives: () => ipcRenderer.invoke('desktop:cak-explorer-open-all')
   ,searchCakArchive: (options) => ipcRenderer.invoke('desktop:cak-explorer-search', options)
   ,chooseCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-choose-output')
    ,extractCakEntries: (payload) => ipcRenderer.invoke('desktop:cak-explorer-extract', payload)
   ,openCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-open-output')
   ,chooseRepackSource: () => ipcRenderer.invoke('desktop:repackager-choose-source')
   ,buildRepackPackage: (sourceRoot) => ipcRenderer.invoke('desktop:repackager-build', sourceRoot)
+  ,verifyRepackPackage: () => ipcRenderer.invoke('desktop:repackager-verify')
+  ,openRepackOutput: () => ipcRenderer.invoke('desktop:repackager-open-output')
 });
