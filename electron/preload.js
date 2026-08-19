@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   chooseDdsReferenceFolder: () => ipcRenderer.invoke('desktop:dds-converter-choose-reference-folder'),
   runDdsConversion: (payload) => ipcRenderer.invoke('desktop:dds-converter-run', payload),
   openDdsConverterOutput: () => ipcRenderer.invoke('desktop:dds-converter-open-output')
+  ,openReferenceModelsFolder: () => ipcRenderer.invoke('desktop:open-reference-models-folder')
   ,getCakExplorerStatus: () => ipcRenderer.invoke('desktop:cak-explorer-status')
   ,chooseCakArchive: () => ipcRenderer.invoke('desktop:cak-explorer-choose-archive')
   ,openCakArchive: (archivePath) => ipcRenderer.invoke('desktop:cak-explorer-open', archivePath)

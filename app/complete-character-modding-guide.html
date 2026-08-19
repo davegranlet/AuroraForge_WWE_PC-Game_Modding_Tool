@@ -64,7 +64,10 @@
 
     <section class="character-guide-chapter">
       <div class="chapter-number">04</div><div class="chapter-content"><h2>Make a safe project</h2>
-        <ol><li>Open Aurora Forge <b>Projects</b>.</li><li>Create a project named for the character.</li><li>Inside it make: <code>00_Backups</code>, <code>01_References</code>, <code>02_Model</code>, <code>03_Textures</code>, <code>04_Attire</code>, <code>05_Audio</code>, <code>06_Profiles_JSON</code>, <code>07_Ready_To_Bake</code>, <code>08_Test_Builds</code>, and <code>09_Screenshots</code>.</li><li>Copy your save backup and untouched source files into <code>00_Backups</code>.</li><li>Never edit the only copy.</li></ol>
+        <ol><li>Enter the character name below and select <b>Create Complete Character Project</b>.</li><li>Aurora Forge creates <code>00_Backups</code>, <code>01_References</code>, <code>02_Model</code>, <code>03_Textures</code>, <code>04_Attire</code>, <code>05_Audio</code>, <code>06_Profiles_JSON</code>, <code>07_Ready_To_Bake</code>, <code>08_Test_Builds</code>, and <code>09_Screenshots</code>.</li><li>Copy your save backup and untouched source files into <code>00_Backups</code>.</li><li>Never edit the only copy.</li></ol>
+        <div class="ai-field"><label for="completeCharacterProjectName">Character project name</label><input id="completeCharacterProjectName" value="New Complete Character"></div>
+        <div class="ai-actions"><button class="ai-btn" id="createCompleteCharacterProject" type="button">Create Complete Character Project</button></div>
+        <p id="completeCharacterProjectStatus" class="cak-message" role="status"></p>
         <div class="guide-check"><b>Pass:</b> you can delete the entire Work area and still restore the original from Backups.</div>
       </div>
     </section>
@@ -78,7 +81,9 @@
 
     <section class="character-guide-chapter" id="assets">
       <div class="chapter-number">06</div><div class="chapter-content"><h2>Choose a safe model base</h2><p>A new character normally begins from a known-working WWE 2K26 character structure that matches the body/skeleton category you need.</p>
-        <ol><li>Use CakeView to inspect a suitable source character.</li><li>Record every folder, model, material, and texture name before changing anything.</li><li>Export supported model parts for editing only through the current CakeView/PWM Blender workflow.</li><li>Keep the skeleton, required mesh names, UV maps, material slots, and model scale unless the current tool documentation says otherwise.</li><li>Build original geometry or use assets you are allowed to modify.</li><li>Test the base body before adding hair and clothing.</li></ol>
+        <ol><li>Download the Aurora Forge reference-model library from the current VikingStudios Discord link.</li><li>Select <b>Open Reference Models Folder</b> and place the downloaded <code>MCDS</code> and <code>MTLS</code> contents in their matching folders.</li><li>Choose the supplied reference point that matches the body/skeleton category you need.</li><li>Record every folder, model, material, and texture name before changing anything.</li><li>Keep the skeleton, required mesh names, UV maps, material slots, and model scale unless verified documentation says otherwise.</li><li>Build original geometry or use assets you are allowed to modify.</li><li>Test the base body before adding hair and clothing.</li></ol>
+        <div class="ai-actions"><button class="ai-btn" id="openReferenceModelsFolder" type="button">Open Reference Models Folder</button></div>
+        <p id="referenceModelsStatus" class="cak-message" role="status"></p>
         <div class="guide-stop"><b>Stop:</b> you do not know which skeleton/body category the source uses, exported UVs changed, or model import reports missing parts.</div>
       </div>
     </section>
@@ -184,6 +189,7 @@
     <footer class="app-footer">Aurora Forge · VikingStudios · Complete Character Guide</footer>
   </main>
 </div>
+<script src="assets/js/complete-character-guide.js"></script>
 </body>
 </html>
 

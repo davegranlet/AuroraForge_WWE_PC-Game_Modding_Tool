@@ -268,6 +268,10 @@ function uniquePath(baseDir, baseName) {
   throw new Error('Could not create a unique project folder name.');
 }
 
+function defaultReferenceModelsPath() {
+  return path.join(app.getPath('documents'), 'Aurora Forge Reference Models');
+}
+
 function safeInsideAllowedRoots(filePath) {
   const allowedRoots = [defaultProjectsPath(), app.getPath('documents'), app.getPath('desktop')];
   return allowedRoots.some((rootPath) => isPathInside(filePath, rootPath));
@@ -727,6 +731,25 @@ ipcMain.handle('desktop:dds-converter-open-output', async () => {
   return { ok: !error, error };
 });
 
+ipcMain.handle('desktop:open-reference-models-folder', async () => {
+  const modelRoot = defaultReferenceModelsPath();
+  ensureDir(modelRoot);
+  ensureDir(path.join(modelRoot, 'MCDS'));
+  ensureDir(path.join(modelRoot, 'MTLS'));
+  const readmePath = path.join(modelRoot, 'README.txt');
+  if (!fs.existsSync(readmePath)) fs.writeFileSync(readmePath, [
+    'Aurora Forge Reference Models',
+    '',
+    'Place downloaded reference-model folders in the matching locations:',
+    '- MCD files and their character folders: MCDS/',
+    '- MTLS reference files and folders: MTLS/',
+    '',
+    'Aurora Forge treats these as read-only reference points. Keep original downloads unchanged.'
+  ].join('\n') + '\n', 'utf8');
+  const error = await shell.openPath(modelRoot);
+  return { ok: !error, path: modelRoot, error };
+});
+
 ipcMain.handle('desktop:save-text-file', async (_event, payload) => {
   const defaultName = sanitizeName(payload && payload.defaultName ? payload.defaultName : 'wwe2k26-note.txt');
   const result = await dialog.showSaveDialog({
@@ -745,12 +768,16 @@ ipcMain.handle('desktop:create-project-folder', async (_event, payload) => {
   const projectName = sanitizeName(payload && payload.name ? payload.name : 'New Luchador Mask Project');
   const projectPath = uniquePath(root, projectName);
   ensureDir(projectPath);
-  ['approved-images', 'profiles', 'prompts', 'handoff-packs', 'outputs', 'exports', 'notes'].forEach((folder) => ensureDir(path.join(projectPath, folder)));
+  const projectType = payload && payload.type ? payload.type : 'lmask';
+  const folders = projectType === 'complete_caw'
+    ? ['00_Backups', '01_References', '02_Model', '03_Textures', '04_Attire', '05_Audio', '06_Profiles_JSON', '07_Ready_To_Bake', '08_Test_Builds', '09_Screenshots']
+    : ['approved-images', 'profiles', 'prompts', 'handoff-packs', 'outputs', 'exports', 'notes'];
+  folders.forEach((folder) => ensureDir(path.join(projectPath, folder)));
   const project = {
     app: 'Aurora Forge',
     release: '1.6.0 RC1 Prompt Builder Edition',
     name: projectName,
-    type: payload && payload.type ? payload.type : 'lmask',
+    type: projectType,
     notes: payload && payload.notes ? payload.notes : '',
     created_at: new Date().toISOString(),
     expected_lmask_outputs: ['mask_color.png', 'mask_mask1.png', 'mask_nrm.png']
@@ -761,6 +788,9 @@ ipcMain.handle('desktop:create-project-folder', async (_event, payload) => {
     '',
     'Project: ' + projectName,
     'Type: ' + project.type,
+    '',
+    'Created folders:',
+    ...folders.map((folder) => '- ' + folder),
     '',
     'Suggested workflow:',
     '1. Keep untouched source and extracted files in a separate backup.',
