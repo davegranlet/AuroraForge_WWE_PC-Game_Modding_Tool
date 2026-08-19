@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>Aurora Forge — Tutorials</title>
+<link rel="stylesheet" href="assets/css/style.css?v=20260726-r160d">
+</head>
+<body class="desktop-studio-shell">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="app-brand"><div class="app-mark app-mark-logo"><img src="assets/img/aurora-forge-mark.png" alt="Aurora Forge logo"></div><div><div class="app-brand-title">Aurora Forge</div><div class="app-brand-sub">by VikingStudios</div></div></div>
+    <nav class="app-side-nav" aria-label="Primary app navigation">
+      <a class="app-nav-link" href="index.html"><span class="nav-ico">⌂</span><span><strong>Home</strong><small>Start here</small></span></a>
+      <a class="app-nav-link" href="project-manager.html"><span class="nav-ico">▣</span><span><strong>Projects</strong><small>Save and continue</small></span></a>
+      <a class="app-nav-link" href="creative-studios.html"><span class="nav-ico">◆</span><span><strong>Prompt Builders</strong><small>Build instructions</small></span></a>
+      <a class="app-nav-link" href="tools.html"><span class="nav-ico">⚙</span><span><strong>Tools</strong><small>Preview and inspect</small></span></a>
+      <a class="app-nav-link active" href="tutorials.html"><span class="nav-ico">▤</span><span><strong>Tutorials</strong><small>Learn step by step</small></span></a>
+      <a class="app-nav-link" href="setup.html"><span class="nav-ico">☷</span><span><strong>Setup</strong><small>Folders and programs</small></span></a>
+      <div class="app-nav-divider" aria-hidden="true"></div>
+      <a class="app-nav-link" href="about.html"><span class="nav-ico">ⓘ</span><span><strong>About</strong><small>Version and credits</small></span></a>
+    </nav>
+    <div class="app-sidebar-card"><div class="mini-label">Help</div><strong>One job · One lesson</strong><span>Stop when something does not look right.</span></div>
+  </aside>
+  <main class="app-main">
+    <section class="app-topbar">
+      <div><div class="eyebrow">Aurora Forge · Help Center</div><h1>Tutorials</h1><p class="sub">Easy lessons, short videos, troubleshooting, and the complete handbook in one place.</p></div>
+    </section>
+    <div class="easy-guide-shell">
+      <section class="ai-hero hero-glow app-hero easy-guide-hero">
+        <div>
+          <div class="part-label">Start here when you need help</div>
+          <h2>Pick one job. Follow the steps.</h2>
+          <p>You do not need to learn everything at once. Open the lesson for the job you are doing. Finish one step before moving to the next one.</p>
+        </div>
+        <div class="easy-guide-actions">
+          <button class="ai-btn secondary" id="easy-guide-expand" type="button">Open all lessons</button>
+          <button class="ai-btn secondary" id="easy-guide-collapse" type="button">Close all lessons</button>
+        </div>
+      </section>
+
+      <nav class="hub-jump-nav" aria-label="Tutorial sections">
+        <a href="#complete-character-path">Complete character</a>
+        <a href="#easy-lessons">Easy lessons</a>
+        <a href="#video-library">Videos</a>
+        <a href="#complete-handbook">Complete handbook</a>
+      </nav>
+
+      <section class="tutorial-major-paths" id="complete-character-path">
+        <a class="tutorial-major-card primary" href="complete-character-modding-guide.html">
+          <span class="tutorial-major-number">01</span><span><strong>Build a Complete Character</strong><small>Install CakeHook, prepare the model and textures, create the Tribute slot, add attire, music, moveset, entrance, bake, and test.</small></span><b>Open guide →</b>
+        </a>
+        <a class="tutorial-major-card" href="complete-character-modding-guide.html#dds-conversion">
+          <span class="tutorial-major-number">02</span><span><strong>DDS ↔ PNG Without Photoshop</strong><small>Install Microsoft texconv, convert both directions, match the original DDS format, and check the result.</small></span><b>Open tutorial →</b>
+        </a>
+        <a class="tutorial-major-card cakeview-course-entry" href="cakeview-visual-quick-start.html">
+          <span class="tutorial-major-number">03</span><span><strong>CakeView Visual Quick Start</strong><small>Use real CakeView footage to learn settings, archive browsing, character models, the 3D viewer, SDB Editor, and YCL Editor.</small></span><b>Watch course →</b>
+        </a>
+      </section>
+
+      <section class="ai-panel app-panel tutorial-video-library" id="video-library">
+        <div class="section-label" style="margin-top:0;">Short videos</div>
+        <h2>Watch one small job</h2>
+        <p>Choose a video. It will play in the large player below.</p>
+        <div class="tutorial-video-grid">
+          <button type="button" class="tutorial-video-choice active" data-video="01_texture_workflow_overview" data-title="How the texture workflow works"><img src="training/animated-tutorial-clips/01_texture_workflow_overview_thumbnail.png" alt=""><strong>1. Workflow overview</strong></button>
+          <button type="button" class="tutorial-video-choice" data-video="02_convert_png_to_dds" data-title="Convert PNG to DDS"><img src="training/animated-tutorial-clips/02_convert_png_to_dds_thumbnail.png" alt=""><strong>2. PNG to DDS</strong></button>
+          <button type="button" class="tutorial-video-choice" data-video="03_replace_texture_files" data-title="Replace texture files"><img src="training/animated-tutorial-clips/03_replace_texture_files_thumbnail.png" alt=""><strong>3. Replace textures</strong></button>
+          <button type="button" class="tutorial-video-choice" data-video="04_check_ycl_mcd_mtl_dds_chain" data-title="Check the file chain"><img src="training/animated-tutorial-clips/04_check_ycl_mcd_mtl_dds_chain_thumbnail.png" alt=""><strong>4. Check the file chain</strong></button>
+          <button type="button" class="tutorial-video-choice" data-video="05_test_and_fix_loop" data-title="Test and fix"><img src="training/animated-tutorial-clips/05_test_and_fix_loop_thumbnail.png" alt=""><strong>5. Test and fix</strong></button>
+        </div>
+      </section>
+
+      <section class="ai-panel app-panel easy-guide-video-panel" id="tutorial-video-player">
+        <div class="section-label" style="margin-top:0;">Now playing</div>
+        <h2 id="easy-guide-video-title">How the texture workflow works</h2>
+        <video id="easy-guide-video" controls preload="metadata" poster="training/animated-tutorial-clips/cover.png">
+          <source src="training/animated-tutorial-clips/01_texture_workflow_overview.mp4" type="video/mp4">
+        </video>
+      </section>
+
+      <section id="easy-lessons">
+        <div class="easy-guide-tools">
+          <div class="easy-guide-search">
+            <label for="easy-guide-search">What are you trying to do?</label>
+            <input id="easy-guide-search" type="search" placeholder="Try face, mask, music, arena, CakeView, or error" autocomplete="off">
+          </div>
+          <div class="easy-guide-count" id="easy-guide-count" aria-live="polite">Loading lessons…</div>
+        </div>
+        <div class="easy-guide-groups" id="easy-guide-groups" aria-label="Lesson groups"></div>
+        <section class="easy-guide-list" id="easy-guide-list" aria-live="polite"></section>
+      </section>
+
+      <section class="ai-panel app-panel easy-guide-manual" id="complete-handbook">
+        <div>
+          <div class="section-label" style="margin-top:0;">Complete handbook</div>
+          <h2>Want the whole process in one readable guide?</h2>
+          <p>Open the searchable reader inside Aurora Forge, or download the professionally formatted PDF. The handbook covers tools, files, characters, textures, clothing, music, arenas, troubleshooting, safety, source links, and exact picture/video requests.</p>
+        </div>
+        <div class="easy-guide-manual-actions">
+          <a class="ai-btn primary" href="handbook-reader.html">Open Complete Handbook</a>
+          <a class="ai-btn secondary" href="downloads/Aurora_Forge_Reader_Handbook.pdf" download>Download Reader PDF</a>
+          <a class="ai-btn secondary" href="downloads/Aurora_Forge_Reader_Handbook.docx" download>Download Editable DOCX</a>
+        </div>
+      </section>
+    </div>
+    <footer class="app-footer">Aurora Forge · VikingStudios · Tutorials</footer>
+  </main>
+</div>
+<script src="assets/js/app-config-loader.js?v=20260726-r160d"></script>
+<script src="assets/js/desktop-bridge.js?v=20260726-r160d"></script>
+<script src="assets/js/easy-guide-data.js?v=20260726-r160d"></script>
+<script src="assets/js/easy-guide.js?v=20260726-r160d"></script>
+</body>
+</html>
+

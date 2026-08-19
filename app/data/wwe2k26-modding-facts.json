@@ -1,0 +1,71 @@
+{
+  "title": "Aurora Forge WWE 2K26 PC Modding Fact Library",
+  "reviewed": "2026-08-05",
+  "policy": "Confirmed facts require a primary tool-maker or official project source. Community demonstrations are useful examples but remain version-sensitive.",
+  "facts": [
+    {
+      "id": "cakehook-install-2026",
+      "status": "confirmed",
+      "fact": "The CakeHook package documented for WWE 2K26 is installed by placing its dinput8 file and Plugins folder in the WWE 2K26 directory.",
+      "source": "https://www.patreon.com/PWMods/posts/cakeview-26-156735503?l=en-GB",
+      "sourceDate": "2026-04-28"
+    },
+    {
+      "id": "cakeview-26-features",
+      "status": "confirmed",
+      "fact": "CakeView 26 documents WWE 2K20-2K26 file support, baking, file exploration, a shader-enabled model viewer, MTLS viewing, directory watching, silent baking, and an Always Alive CAK fast-bake function.",
+      "source": "https://www.patreon.com/PWMods/posts/cakeview-26-156735503?l=en-GB",
+      "sourceDate": "2026-04-28"
+    },
+    {
+      "id": "tribute-26-capacity",
+      "status": "confirmed-for-initial-release",
+      "fact": "Tribute 26's initial announcement described 732 new character slots, 25 attire slots per character, 2500 custom music slots, 2500 ring-announcer slots, and Auto-Bake communication with CakeView.",
+      "source": "https://www.patreon.com/TributeModding/posts/tribute-26-is-154757792?l=en-GB",
+      "sourceDate": "2026-04-18"
+    },
+    {
+      "id": "tribute-26-v130",
+      "status": "confirmed",
+      "fact": "Tribute 26 v1.3.0 announced game-save editing, advanced entrance profiles, and additional audio slots for belts, teams, hometowns, entrance voiceovers, moves, taunts, and props.",
+      "source": "https://www.patreon.com/TributeModding/posts/tribute-26-v1-3-160530629",
+      "sourceDate": "2026-06-08"
+    },
+    {
+      "id": "directxtex-texconv",
+      "status": "confirmed",
+      "fact": "Microsoft DirectXTex texconv can read DDS, read and write WIC formats including PNG, select a DXGI output format, create mipmaps, recurse through folders, and write to an output directory.",
+      "source": "https://github.com/microsoft/DirectXTex/wiki/Texconv",
+      "sourceDate": "2026-04-21"
+    },
+    {
+      "id": "dds-match-target",
+      "status": "derived-best-practice",
+      "fact": "A replacement DDS should match the working target texture's dimensions, compression/DXGI format, alpha expectations, and mip behavior instead of using one universal preset.",
+      "source": "https://github.com/microsoft/DirectXTex/wiki/Texconv",
+      "sourceDate": "2026-04-21"
+    },
+    {
+      "id": "soundfactory-custom-theme",
+      "status": "community-demonstrated-version-sensitive",
+      "fact": "Multiple WWE 2K26 community tutorials demonstrate current custom-theme workflows using SoundFactory; exact audio conversion and ID steps must be checked against the current SoundFactory release.",
+      "sources": [
+        "https://www.youtube.com/watch?v=G2G_NMOsYaM",
+        "https://www.youtube.com/watch?v=X6u3_eEcalQ"
+      ]
+    },
+    {
+      "id": "binary-format-boundary",
+      "status": "confirmed-by-local-samples",
+      "fact": "MCD, MTLS, JMTL, and YCL files can expose readable names or references, but readable strings do not prove that direct binary editing is safe. Aurora Forge keeps inspection read-only unless a supported editor workflow is documented.",
+      "source": "Aurora Forge local sample-file analysis",
+      "sourceDate": "2026-08-05"
+    }
+  ],
+  "unknowns": [
+    "A complete public specification for WWE 2K26 MCD, MTLS, JMTL, and YCL binary formats was not located.",
+    "Exact model import/export rules can vary with CakeView and the PWM Blender add-on version.",
+    "Exact custom-audio codec, container, and slot steps can vary with SoundFactory releases.",
+    "A game or tool update can invalidate addresses, plugins, file layouts, IDs, or automation behavior."
+  ]
+}

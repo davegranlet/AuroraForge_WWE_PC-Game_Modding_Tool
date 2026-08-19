@@ -1,0 +1,72 @@
+{
+  "release": "1.6.0.m",
+  "releaseTitle": "Prompt Builder Edition",
+  "distributionGoal": "portable_windows_x64_zip",
+  "primaryNavigation": [
+    {"id":"home","title":"Home","file":"index.html"},
+    {"id":"projects","title":"Projects","file":"project-manager.html"},
+    {"id":"prompt_builders","title":"Prompt Builders","file":"creative-studios.html"},
+    {"id":"tools","title":"Tools","file":"tools.html"},
+    {"id":"tutorials","title":"Tutorials","file":"tutorials.html"},
+    {"id":"setup","title":"Setup","file":"setup.html"},
+    {"id":"about","title":"About","file":"about.html"}
+  ],
+  "creativeStudios": [
+    {"id":"complete_character","title":"Complete Character","file":"caw-character-builder.html"},
+    {"id":"face_texture","title":"Face Texture","file":"face-texture-studio.html"},
+    {"id":"tattoo","title":"Tattoo","file":"tattoo-pipeline.html"},
+    {"id":"luchador_mask","title":"Luchador Mask","file":"lmask-project-studio.html"},
+    {"id":"gear_attire","title":"Gear / Attire","file":"gear-attire-studio.html"},
+    {"id":"entrance_gear","title":"Entrance Gear","file":"entrance-gear-studio.html"},
+    {"id":"material_fabric","title":"Material / Fabric","file":"material-fabric-studio.html"},
+    {"id":"normal_shader","title":"Normal / Shader","file":"normal-map-shader-helper.html"},
+    {"id":"logo_emblem","title":"Logo / Emblem","file":"logo-emblem-studio.html"},
+    {"id":"reference_cleanup","title":"Reference Cleanup","file":"reference-cleanup-pipeline.html"},
+    {"id":"championship_belt","title":"Championship Belt","file":"championship-belt-studio.html"},
+    {"id":"arena_ring","title":"Arena / Ring Branding","file":"arena-ring-branding-studio.html"},
+    {"id":"faction_pack","title":"Faction Pack","file":"faction-pack-builder.html"}
+  ],
+  "tools": [
+    {"id":"character_viewer","title":"Character Viewer","file":"character-viewer.html"},
+    {"id":"face_calibration","title":"Face Calibration","file":"face-calibration-workflow.html"},
+    {"id":"mod_file_inspector","title":"Mod File Inspector","file":"mod-file-inspector.html"},
+    {"id":"dds_converter","title":"DDS Converter","file":"dds-converter.html"},
+    {"id":"cak_explorer","title":"Game Archive Explorer","file":"cak-explorer.html"}
+  ],
+  "capabilities": [
+    {"id":"project_management","status":"available","boundary":"Local project folders and files selected by the user."},
+    {"id":"prompt_builders","status":"available","boundary":"Builds prompts and handoff packs; the user chooses an external AI or image tool to generate the creative result."},
+    {"id":"external_program_setup","status":"available","boundary":"Stores and opens user-selected local paths; never bundles or installs third-party programs."},
+    {"id":"cakehook_presence_check","status":"available","boundary":"Read-only presence check; not an installer or compatibility guarantee."},
+    {"id":"mod_file_inspector","status":"available","boundary":"Read-only original-versus-modified comparison."},
+    {"id":"dds_converter","status":"available","boundary":"Runs the included MIT-licensed Microsoft DirectXTex texconv utility only on explicitly selected local files and writes only to a separately selected output folder."},
+    {"id":"character_viewer","status":"available","boundary":"User-imported OBJ and image preview only; no game assets are bundled, extracted, or written."},
+    {"id":"tutorial_center","status":"available","boundary":"Beginner lessons, animated videos, searchable in-app handbook, and source-linked reader editions."},
+    {"id":"cak_explorer","status":"available","boundary":"Read-only WWE 2K26 CAK catalog browsing and selected-file extraction to a separate user-chosen folder; never writes into game archives."}
+  ],
+  "expectedLmaskOutputs": ["mask_color.png","mask_mask1.png","mask_nrm.png"],
+  "releaseHighlights": [
+    "Built-in read-only WWE 2K26 Game Archive Explorer with real-path selected-file extraction",
+    "Automatic use of the game-owned Oodle library without bundling or copying it",
+    "Expanded catalog of 167,381 confirmed path hashes derived from paths shared by the user's WWE 2K25 extraction and installed WWE 2K26 archives",
+    "All 135,552 path hashes matched from the supplied extracted layout are permanently included in the release catalog",
+    "Archive names are maintained by Aurora Forge releases; end users never scan an extracted game folder",
+    "Archive opening uses the bundled catalog immediately and cannot be overridden by stale local name data",
+    "Ready-files view that preserves understandable Windows folders and blocks unresolved hash dumps",
+    "Extraction limits, path protections, collision control, and a saved result report",
+    "Automatic batch DDS and PNG converter with original-texture format, dimension, and mipmap matching",
+    "Guided WWE 2K26 prompt builders with editable project inputs and complete handoff-pack exports",
+    "Complete child-friendly character path from CakeHook installation through Tribute profiles, assets, baking, and in-game testing",
+    "New Photoshop-free DDS and PNG conversion tutorial using Microsoft DirectXTex texconv",
+    "Current WWE 2K26 modding fact library with confirmed, community-demonstrated, version-sensitive, and unknown classifications",
+    "Searchable complete handbook reader inside Tutorials",
+    "Professionally formatted, bookmarked PDF reader edition",
+    "Editable DOCX and technical Markdown editions kept in sync",
+    "Internal planning notes removed from end-user handbook files",
+    "Clear Projects, Prompt Builders, Tools, Tutorials, Setup, and About product hierarchy",
+    "Forty-seven child-friendly lessons, five animated foundation videos, and one supplied Tribute prop tutorial",
+    "New guided workflows for safe slot replacement, Default-data protection, entrance templates, prop profiles, and shiny/black material troubleshooting",
+    "Two real Tribute 26 interface references embedded in the matching lessons",
+    "New source-linked walkthroughs for wrestler, arena, show-asset, belt, custom-move, material, prop-map, entrance-GFX, face-paint, and optional local TTS workflows"
+  ]
+}
