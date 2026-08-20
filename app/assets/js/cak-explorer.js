@@ -96,24 +96,40 @@
     try {
       const status = await api.getCakExplorerStatus();
       const ready = status.ready && Boolean(status.oodle);
+      byId('cakGameFolderPath').textContent = status.gameFolder || 'No game folder selected.';
       byId('cakReadyBadge').textContent = ready ? 'Ready' : 'Setup needed';
       byId('cakReadyBadge').classList.toggle('ready', ready);
       byId('cakReadyText').textContent = status.extractionSupported === false
         ? 'Linux supports safe CAK catalog browsing and search. Extraction remains Windows-only because the game provides a Windows Oodle library.'
-        : (ready ? `${status.archives.length} archive(s) found. The game decompressor is ready.` : 'Choose your WWE 2K26 game folder in Setup so Aurora Forge can find Oodle.');
+        : (ready ? `${status.archives.length} archive(s) found. The game decompressor is ready.` : 'Choose your WWE 2K26 game folder below so the extractor can find the archives and Oodle.');
       if (status.extractionSupported === false) byId('cakExtractAllArchives').disabled = true;
       const select = byId('cakArchiveSelect');
+      select.replaceChildren(new Option('Choose an archive...', ''));
       status.archives.forEach((archive) => { const option = document.createElement('option'); option.value = archive.path; option.textContent = `${archive.name} (${formatBytes(archive.bytes)})`; select.appendChild(option); });
+      message('cakSetupMessage', ready
+        ? `Ready: ${status.archives.length} CAK archive(s) and the Oodle decompressor were found.`
+        : (status.gameFolder ? 'The folder was saved, but oo2core_9_win64.dll was not found there.' : 'Choose the folder containing WWE2K26.exe, the CAK archives, and oo2core_9_win64.dll.'), ready ? 'good' : '');
       byId('cakDevDetails').textContent = JSON.stringify(status, null, 2);
     } catch (error) { message('cakOpenMessage', error.message, 'bad'); }
   }
+  byId('cakChooseGameFolder').addEventListener('click', async () => {
+    try {
+      const result = await api.chooseToolPath('gameFolder');
+      if (!result || !result.ok) return;
+      state.archivePath = '';
+      byId('cakArchivePath').textContent = 'No archive selected.';
+      byId('cakOpenArchive').disabled = true;
+      message('cakSetupMessage', 'Checking the selected game folder...', 'working');
+      await initialize();
+    } catch (error) { message('cakSetupMessage', error.message, 'bad'); }
+  });
   byId('cakArchiveSelect').addEventListener('change', (event) => { state.archivePath = event.target.value; byId('cakArchivePath').textContent = state.archivePath || 'No archive selected.'; byId('cakOpenArchive').disabled = !state.archivePath; });
   byId('cakBrowseArchive').addEventListener('click', async () => { try { const result = await api.chooseCakArchive(); if (!result.ok) return; state.archivePath = result.path; byId('cakArchivePath').textContent = result.path; byId('cakOpenArchive').disabled = false; } catch (error) { message('cakOpenMessage', error.message, 'bad'); } });
   byId('cakOpenArchive').addEventListener('click', () => openArchive('resolved'));
   byId('cakBrowseAll').addEventListener('click', () => openArchive('all-archives'));
   byId('cakExtractAllArchives').addEventListener('click', async () => {
     const paths = [...byId('cakArchiveSelect').options].map((option) => option.value).filter(Boolean);
-    if (!paths.length) { message('cakOpenMessage', 'Set the WWE 2K26 game folder in Setup first.', 'bad'); return; }
+    if (!paths.length) { message('cakOpenMessage', 'Choose the WWE 2K26 game folder at the top of this page first.', 'bad'); return; }
     const chosen = await api.chooseCakOutput();
     if (!chosen || !chosen.ok) return;
     if (!window.confirm(`Extract every safely named file from all ${paths.length} CAK archives?\n\nOutput: ${chosen.path}\n\nThe original archives will not be changed.`)) return;

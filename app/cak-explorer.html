@@ -32,6 +32,14 @@
       </section>
 
       <section class="ai-panel app-panel">
+        <div class="section-label" style="margin-top:0;">Setup - Locate your installed game</div>
+        <h2>Choose your WWE 2K26 game folder</h2>
+        <p>The extractor uses this folder to find every <code>.cak</code> archive and the game-provided <code>oo2core_9_win64.dll</code> decompressor. You only need to choose it once.</p>
+        <div class="cak-path-row"><code id="cakGameFolderPath">No game folder selected.</code><button id="cakChooseGameFolder" class="ai-btn" type="button">Choose Game Folder</button></div>
+        <p id="cakSetupMessage" class="cak-message" role="status"></p>
+      </section>
+
+      <section class="ai-panel app-panel">
         <div class="section-label" style="margin-top:0;">1 - Choose an archive</div>
         <div class="cak-control-grid">
           <label class="cak-field"><span>Archives found in your game folder</span><select id="cakArchiveSelect"><option value="">Choose an archive...</option></select></label>
@@ -91,7 +99,7 @@
         <div class="section-label" style="margin-top:0;">Important</div>
         <h2>Original game archives remain read-only</h2>
         <p>Aurora Forge never changes the selected CAK. Every confirmed path is built into the release. A payload with an unknown name can still be extracted into an <code>Unresolved</code> folder under a generated hash name. An external reference cannot be extracted from the selected CAK because that catalog record contains no payload bytes. Keep extracted game assets for personal modding and do not redistribute copyrighted game content.</p>
-        <div class="ai-actions"><a class="ai-btn secondary" href="tutorials.html#cak-explorer">Open the child-friendly tutorial</a><a class="ai-btn secondary" href="setup.html#external-programs">Check Setup</a></div>
+        <div class="ai-actions"><a class="ai-btn secondary" href="tutorials.html#cak-explorer">Open the child-friendly tutorial</a><a class="ai-btn secondary" href="setup.html#external-programs">Open full app Setup</a></div>
       </section>
     </div>
   </main>
