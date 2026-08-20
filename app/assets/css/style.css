@@ -2698,3 +2698,8 @@ body.standalone-tool .app-shell { display: block; }
 body.standalone-tool .app-sidebar { display: none; }
 body.standalone-tool .app-main { width: 100%; }
 body.standalone-tool .standalone-hidden { display: none !important; }
+
+/* Standalone tools occupy the full window without the Aurora Forge navigation column. */
+body.standalone-tool .app-shell { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; width: 100% !important; }
+body.standalone-tool .app-sidebar { display: none !important; }
+body.standalone-tool .app-main { grid-column: 1 / -1 !important; min-width: 0 !important; width: 100% !important; }
