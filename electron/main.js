@@ -529,7 +529,7 @@ ipcMain.handle('desktop:cak-explorer-open', async (_event, archivePath) => {
 
 ipcMain.handle('desktop:cak-explorer-open-all', async () => {
   const gameFolder = readToolConfig().gameFolder || '';
-  if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) throw new Error('Choose the WWE 2K26 game folder in Setup first.');
+  if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) throw new Error('Choose the WWE 2K26 game folder at the top of the extractor first.');
   const archivePaths = fs.readdirSync(gameFolder, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.cak$/i.test(entry.name))
     .map((entry) => path.join(gameFolder, entry.name))
@@ -601,7 +601,7 @@ ipcMain.handle('desktop:cak-explorer-extract', async (_event, payload) => {
     if (freeBytes < totalBytes + 64 * 1024 * 1024) throw new Error('The output drive does not have enough free space for this extraction job.');
   }
   const oodlePath = resolveOodlePath(files[0].sourceArchivePath || currentCakSession.archivePath);
-  if (files.some((file) => file.compressed) && !oodlePath) throw new Error('oo2core_9_win64.dll was not found. Choose the WWE 2K26 game folder in Setup.');
+  if (files.some((file) => file.compressed) && !oodlePath) throw new Error('oo2core_9_win64.dll was not found. Choose the WWE 2K26 game folder at the top of the extractor.');
   const helper = cakHelperPath();
   if (!fs.existsSync(helper)) throw new Error('The included Aurora Forge extraction helper is missing.');
   const groups = new Map();
