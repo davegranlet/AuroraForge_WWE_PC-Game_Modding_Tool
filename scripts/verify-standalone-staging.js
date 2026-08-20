@@ -22,5 +22,9 @@ for (const variant of variants) {
   }
   const htmlFiles = fs.readdirSync(appRoot).filter((name) => name.endsWith('.html'));
   if (htmlFiles.length !== 1 || htmlFiles[0] !== variant.page) throw new Error(`${variant.id}: unrelated application pages were packaged.`);
+  const launcher = fs.readFileSync(path.join(root, 'build', `standalone-${variant.id}`, 'electron', `standalone-${variant.id}-main.js`), 'utf8');
+  if (!launcher.includes(`AURORA_STANDALONE_TOOL = '${variant.id}'`)) {
+    throw new Error(`${variant.id}: standalone application mode is missing from the packaged launcher.`);
+  }
   console.log(`OK: ${variant.id} is an independent single-tool staging package.`);
 }

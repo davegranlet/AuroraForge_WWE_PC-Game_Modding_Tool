@@ -70,7 +70,8 @@ function run(command, args) {
   if (result.status !== 0) throw new Error(`${command} failed with exit code ${result.status}`);
 }
 
-if (!fs.existsSync(runtime)) run('npm', ['run', 'prepare:runtime']);
+// Always regenerate staging. Reusing it can silently ship stale launchers, styles, or tool resources.
+run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'prepare:runtime']);
 fs.mkdirSync(release, { recursive: true });
 
 for (const variant of variants) {
