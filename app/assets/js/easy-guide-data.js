@@ -623,6 +623,31 @@
       stop: ['The package target is unknown.', 'You are guessing whether to Retarget or Skip.', 'The package asks you to overwrite the only ADefs or AnimSystem copy.']
     },
     {
+      id: 'clips-editor-inspection',
+      group: 'Advanced',
+      title: 'Inspect and preview a WWE 2K26 .clips file',
+      summary: 'Use Tribute Clips Editor v2.21 to identify and preview entrance clips without changing the source file.',
+      need: ['Clips Editor obtained from its developer', 'A copied WWE 2K26 .clips file from an extracted Animation folder', 'The untouched original', 'A written record of the source path and tool build'],
+      steps: [
+        'Keep the original extracted .clips file untouched and work from a separate copy.',
+        'Open Clips Editor and record the release build shown at the top of the window.',
+        'Choose Open File and select the copied .clips file.',
+        'Confirm the filename and Total Clips count appear before selecting a record.',
+        'Select one clip and record its displayed name, hash, clip ID, frames per second, bone count, shape-key count, and keyframe count.',
+        'Choose Open Clip Player.',
+        'Select the same clip, choose LoadAnim, and use Play, Pause, Stop, or the frame control to inspect it.',
+        'Use Load Opponent only when the selected motion visibly requires a second actor.',
+        'Close the viewer without saving or rebuilding the source file.',
+        'Record which clip displayed correctly and any visible skeleton or two-actor problem.'
+      ],
+      good: ['The tool identifies the WWE 2K26 .clips file and reports a stable clip count.', 'Selecting a record displays its metadata.', 'The selected animation appears in Clip Viewer without altering the source.'],
+      stop: ['The tool build differs from the demonstrated v2.21 interface.', 'The file is your only extracted copy.', 'The preview is blank, malformed, or uses the wrong number of actors.', 'You are about to inject, rebuild/splice, save, bake, or install based only on this inspection lesson.'],
+      sources: [
+        { label: 'Tribute Modding — current Clips Editor announcement for WWE 2K26', url: 'https://x.com/TributeModding/status/2090091586243735827' },
+        { label: 'Tribute Modding — original Clips Editor announcement', url: 'https://www.patreon.com/TributeModding/posts/clips-editor-149444387' }
+      ]
+    },
+    {
       id: 'music',
       group: 'Install',
       title: 'Add or assign entrance music',
@@ -703,6 +728,61 @@
       ],
       good: ['Model pieces line up.', 'The texture follows the real UV placement.', 'Original and replacement switches are easy to compare.'],
       stop: ['The OBJ parts came from different characters.', 'The preview image uses the wrong UV layout.', 'You are treating the preview lighting as an exact copy of the game.']
+    },
+    {
+      id: 'rig-new-character-model',
+      group: 'Advanced',
+      title: 'Rig a completely new character model for WWE 2K26',
+      summary: 'Fit an original mesh to a compatible 2K26 reference, transfer the first-pass weights, repair deformation by hand, and validate it before export.',
+      need: [
+        'A character model you created or have permission to use',
+        'The closest compatible WWE 2K26 base model from your extracted files or Aurora Forge reference-model folder',
+        'A Blender version supported by the current WWE model exporter; the locally validated v2.10.3 add-on declares Blender 2.93 or newer and includes compatibility handling through current Blender releases',
+        'An untouched copy of the reference MCD, MTLS, materials, textures, and companion files',
+        'A disposable test project and a known-good in-game baseline'
+      ],
+      steps: [
+        'Choose the reference by skeleton family, body type, proportions, facial requirements, and clothing behavior—not only by visual resemblance.',
+        'Import the complete reference through the currently supported WWE 2K26 model workflow. In the validated v2.10.3 add-on this is File > Import > Visual Concepts Model (.mdl, .mcd). Preserve its armature, bone names, hierarchy, scale, orientation, material order, and required companion objects.',
+        'Enable Import Shape Keys when the reference uses facial or other morph animation. Use Split Material Groups only when the project needs separate material meshes; record the import settings so the export can be reproduced.',
+        'Import the compatible base model before an attire when the attire depends on embedded HPL masking. Preserve required model attachment points and raw companion data instead of rebuilding or renaming them casually.',
+        'Save an untouched Blender reference scene. Duplicate it for the working rig so you can compare or restart without re-extracting the model.',
+        'Prepare the custom mesh: remove duplicate vertices and hidden geometry, repair normals, apply intended object transforms, keep useful UVs, and separate body, eyes, teeth, mouth, hair, and clothing where the reference keeps them separate.',
+        'Fit the custom mesh to the reference neutral pose. Align the pelvis, shoulders, elbows, wrists, fingers, knees, ankles, neck, jaw, eyes, and mouth before transferring any weights.',
+        'Keep the original 2K26 armature. Parent the custom mesh with an Armature modifier and create vertex groups whose names match the bones used by the reference mesh.',
+        'Transfer a first weight pass from the closest matching reference surface. Use nearest-face interpolated transfer for similar surfaces; transfer body, clothing, hair, and accessories separately when their shapes or intended movement differ.',
+        'Normalize the weights, remove negligible influences, limit excessive bone influences to the exporter or reference limit, and confirm that no required vertex is unweighted.',
+        'Pose-test the shoulders, elbows, wrists, fingers, spine, hips, knees, ankles, neck, and jaw. Inspect both the outside silhouette and the inside of bent joints.',
+        'Repair deformation manually with weight painting. Correct one joint at a time, compare left and right sides, and do not accept automatic transfer where geometry penetrates, collapses, spikes, or stretches.',
+        'For fitted clothing, copy the motion of the body beneath it, then remove influences that pull the garment through unrelated limbs. Test loose hems, coats, skirts, straps, and accessories independently.',
+        'Keep eyes, teeth, tongue, mouth bag, eyelashes, and facial hair attached to their matching reference bones or deformation system. Test eye rotation, jaw opening, lip closure, and extreme head movement.',
+        'If the target requires facial shape keys, transfer or rebuild them only after the neutral mesh and weights are stable. Preserve required key names and test every expression for exploding vertices, gaps, and eye or mouth intersections.',
+        'Check UVs, normals, material-slot order, object names, vertex groups, armature modifier, transforms, shape keys, model attachment points, attire masking, and required companion objects against the known-good reference before export.',
+        'Export to a new disposable WWE 2K26 model package. Never overwrite the extracted reference. Keep the matching MTLS, JMTL, YCL, and texture relationships unless the supported workflow explicitly changes them.',
+        'Inspect the exported package, bake only the disposable test project, and test idle, entrance, walking, running, strikes, grapples, pins, submissions, victory, close-up facial motion, and any garment-specific movement.',
+        'Record each visible failure by pose and body area. Return to the last known-good Blender file, change one weight, shape-key, hierarchy, or material cause, then export and repeat the same test.'
+      ],
+      good: [
+        'The custom mesh uses the original compatible 2K26 skeleton and required bone names.',
+        'Every deforming vertex has controlled weights and extreme poses do not spike, collapse, or expose major gaps.',
+        'Eyes, mouth parts, hair, clothing, and accessories remain attached during entrances, gameplay, and victory scenes.',
+        'The exported project loads beside an untouched reference and can be removed without affecting unrelated content.'
+      ],
+      stop: [
+        'The reference belongs to an incompatible skeleton or body family.',
+        'The current importer/exporter changes or drops required bones, vertex groups, shape keys, material slots, or companion objects.',
+        'An attire with masking is imported without its compatible base-model context, or required attachment-point data is missing.',
+        'Automatic weight transfer is being treated as the finished rig without joint-by-joint pose testing.',
+        'The only copy of the reference or working model would be overwritten.',
+        'The model loads in Blender but its exported package has not passed a controlled in-game test.'
+      ],
+      sources: [
+        { label: 'Blender Manual — Armature Modifier', url: 'https://docs.blender.org/manual/en/latest/modeling/modifiers/deform/armature.html' },
+        { label: 'Blender Manual — Data Transfer Modifier', url: 'https://docs.blender.org/manual/en/latest/modeling/modifiers/modify/data_transfer.html' },
+        { label: 'Blender Studio — Rigging and weight painting fundamentals', url: 'https://studio.blender.org/training/blender-fundamentals-45-lts/blender_4-5_lts_rigging-weight-painting/' },
+        { label: 'Tekken57 — current WWE skeleton, weights, and shape-key demonstration (workflow evidence only)', url: 'https://www.youtube.com/watch?v=wilJIlN5Acg' },
+        { label: 'Tekken57 — manual weight-paint and clipping diagnosis (workflow evidence only)', url: 'https://www.youtube.com/watch?v=iKJhoMbZdbw' }
+      ]
     },
     {
       id: 'quick-port-wrestler',
@@ -973,7 +1053,7 @@
       need: ['Your own installed PC copy of WWE 2K26', 'The WWE 2K26 game folder selected in Setup', 'A new empty output folder', 'Enough free disk space', 'The newest Aurora Forge release for the latest built-in path catalog'],
       steps: [
         'Open Setup and choose your WWE 2K26 game folder.',
-        'Open Tools, then open Game Archive Explorer. Aurora Forge already includes a large list of confirmed WWE 2K26 paths.',
+        'Open Tools, then open Aurora CAK Foundry. Aurora Forge already includes a large list of confirmed WWE 2K26 paths.',
         'Choose one bakedfile CAK from the list.',
         'Press Open Archive. Wait until the file list appears.',
         'Search by a known file type, name, or hash.',

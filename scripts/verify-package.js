@@ -34,11 +34,13 @@ const config = json('app', 'config', 'app-config.json');
 const mainJs = read('electron', 'main.js');
 const preloadJs = read('electron', 'preload.js');
 const guideDataJs = read('app', 'assets', 'js', 'easy-guide-data.js');
+const knowledge = json('app', 'data', 'wwe2k26-modding-facts.json');
+const knowledge22 = json('app', 'data', 'wwe2k22-modding-facts.json');
 
-ok(pkg.version === '1.7.0-rc.1', 'standards-safe package version is 1.7.0-rc.1');
-ok(lock.version === '1.7.0-rc.1' && lock.packages[''].version === '1.7.0-rc.1', 'package-lock root version matches');
-ok(manifest.release === '1.7 Major RC1' && manifest.releaseTitle === 'Prompt Builder Edition', 'manifest identifies visible Prompt Builder Edition');
-ok(config.release === '1.7 Major RC1' && config.releaseTitle === 'Prompt Builder Edition', 'app config identifies visible Prompt Builder Edition');
+ok(pkg.version === '1.7.5', 'standards-safe package version is 1.7.5');
+ok(lock.version === '1.7.5' && lock.packages[''].version === '1.7.5', 'package-lock root version matches');
+ok(manifest.release === '1.7.5' && manifest.releaseTitle === 'Prompt Builder Edition', 'manifest identifies visible Prompt Builder Edition');
+ok(config.release === '1.7.5' && config.releaseTitle === 'Prompt Builder Edition', 'app config identifies visible Prompt Builder Edition');
 ok(pkg.devDependencies.electron === '43.2.0', 'Electron is exactly pinned');
 ok(pkg.devDependencies['@electron/packager'] === '20.0.4', 'Electron Packager is exactly pinned');
 ok(pkg.dependencies.three === '0.185.1', 'Three.js is exactly pinned');
@@ -50,10 +52,12 @@ const required = [
   'app/project-manager.html',
   'app/creative-studios.html',
   'app/tools.html',
+  'app/mod-suite.html',
   'app/faq.html',
   'app/tutorials.html',
   'app/complete-character-modding-guide.html',
   'app/data/wwe2k26-modding-facts.json',
+  'app/data/wwe2k22-modding-facts.json',
   'app/handbook-reader.html',
   'app/setup.html',
   'app/about.html',
@@ -67,16 +71,27 @@ const required = [
   'app/dds-converter.html',
   'app/assets/js/dds-converter.js',
   'app/cak-explorer.html',
+  'app/pac19-explorer.html',
+  'app/assets/js/pac19-explorer.js',
+  'app/cak20-explorer.html',
+  'app/assets/js/cak20-explorer.js',
   'app/data/cak-known-paths.json',
   'app/assets/js/cak-explorer.js',
   'app/tools/cak-helper/AuroraCakHelper.exe',
   'app/tools/cak-helper/README.txt',
   'electron/cak-reader.js',
+  'electron/cak20-reader.js',
   'electron/archive-repackager.js',
+  'electron/cak-v99-key.js',
   'electron/standalone-cak-main.js',
   'electron/standalone-dds-main.js',
+  'electron/standalone-pac19-main.js',
+  'electron/standalone-cak20-main.js',
   'tools/AuroraCakHelper/AuroraCakHelper.csproj',
   'tools/AuroraCakHelper/Program.cs',
+  'tools/AuroraPac19Helper/AuroraPac19Helper.csproj',
+  'tools/AuroraPac19Helper/Program.cs',
+  'tools/AuroraPac19Helper/THIRD-PARTY-NOTICES.md',
   'LICENSE',
   'app/tools/texconv/texconv.exe',
   'app/tools/texconv/LICENSE.txt',
@@ -85,6 +100,8 @@ const required = [
   'app/assets/js/easy-guide.js',
   'app/assets/js/handbook-reader.js',
   'app/assets/js/tool-center.js',
+  'app/assets/js/mod-suite-data.js',
+  'app/assets/js/mod-suite.js',
   'app/training/community-reference/tribute26-replace-slot-checkbox.png',
   'app/training/community-reference/tribute26-entrance-template-editor.png',
   'app/training/community-reference/tribute26-prop-profile-generator.mp4',
@@ -119,7 +136,7 @@ const expectedPrimary = [
 ok(manifest.primaryNavigation.length === 7, 'manifest contains seven primary navigation items');
 ok(JSON.stringify(manifest.primaryNavigation.map((item) => item.file)) === JSON.stringify(expectedPrimary), 'manifest primary navigation order is correct');
 ok(manifest.creativeStudios.length === 13, 'manifest groups thirteen creative studios');
-ok(manifest.tools.length === 5, 'manifest groups five built-in tools');
+ok(manifest.tools.length === 8, 'manifest groups eight built-in tools');
 
 const compatibilityPages = new Set(['desktop-dashboard.html', 'tool-center.html', 'knowledgebase.html']);
 const normalHtmlFiles = fs.readdirSync(appRoot).filter((name) =>
@@ -161,7 +178,7 @@ ok(!setupHtml.includes('onclick='), 'Setup uses CSP-safe button handlers');
 ok(read('app', 'assets', 'js', 'setup.js').includes('setupCheckEverything') && read('app', 'assets', 'js', 'setup.js').includes('setupSavePreferences'), 'Setup button handlers are registered');
 ok(read('app', 'tool-center.html').includes('url=setup.html#external-programs'), 'old External Tools link redirects to Setup');
 ok(mainJs.includes('projectsFolder') && mainJs.includes('exportsFolder'), 'Electron supports persistent Projects and Exports locations');
-ok(mainJs.includes('Version 1.7 Major RC1'), 'Electron About uses visible release 1.7 Major RC1');
+ok(mainJs.includes('Version 1.7.5'), 'Electron About uses visible release 1.7.5');
 ok(!mainJs.includes('toggleDevTools'), 'normal Electron menu does not expose developer tools');
 
 const studiosHtml = read('app', 'creative-studios.html');
@@ -190,7 +207,7 @@ const cakHtml = read('app', 'cak-explorer.html');
 const cakJs = read('app', 'assets', 'js', 'cak-explorer.js');
 const cakReaderJs = read('electron', 'cak-reader.js');
 const cakNames = json('app', 'data', 'cak-known-paths.json');
-['cakArchiveSelect', 'cakResults', 'cakChooseOutput', 'cakExtract', 'cakDevDetails'].forEach((id) => ok(cakHtml.includes(`id="${id}"`), 'Game Archive Explorer contains ' + id));
+['cakArchiveSelect', 'cakResults', 'cakChooseOutput', 'cakExtract', 'cakDevDetails'].forEach((id) => ok(cakHtml.includes(`id="${id}"`), 'Aurora CAK Foundry contains ' + id));
 ['getCakExplorerStatus', 'chooseCakArchive', 'openCakArchive', 'searchCakArchive', 'extractCakEntries'].forEach((method) => ok(preloadJs.includes(method), 'preload exposes scoped CAK method ' + method));
 ['desktop:cak-explorer-open', 'desktop:cak-explorer-search', 'desktop:cak-explorer-extract', 'Extraction into the game folder is blocked'].forEach((token) => ok(mainJs.includes(token), 'Electron CAK backend contains ' + token));
 ['decodePairs', 'recoverKey', 'parseFiles', 'parseFolders', 'buildNameCandidates'].forEach((token) => ok(cakReaderJs.includes(token), 'CAK reader contains ' + token));
@@ -249,7 +266,36 @@ ok(handbookPdf.subarray(0, 4).toString('ascii') === '%PDF', 'reader edition is a
 ok(!/production placeholder|internal review note/i.test(handbookHtml), 'public handbook omits internal production wording');
 ok(read('app', 'knowledgebase.html').includes('url=tutorials.html'), 'old knowledgebase link redirects to Tutorials');
 const guideCount = (guideDataJs.match(/\bid:\s*'/g) || []).length;
-ok(guideCount === 47, 'Tutorials includes exactly 47 child-friendly lessons');
+ok(guideCount === 49, 'Tutorials includes exactly 49 child-friendly lessons');
+const guideIds = [...guideDataJs.matchAll(/\bid:\s*'([^']+)'/g)].map((match) => match[1]);
+const evidenceLabels = new Set(knowledge.evidenceLabels || []);
+const sourceIds = new Set((knowledge.sources || []).map((source) => source.id));
+const factIds = new Set((knowledge.facts || []).map((fact) => fact.id));
+const subjectIds = new Set((knowledge.subjects || []).map((subject) => subject.id));
+ok(knowledge.schemaVersion === 2, 'modding evidence library uses normalized schema version 2');
+ok(subjectIds.size === 18 && (knowledge.coverage || []).length === 18, 'evidence coverage includes all 18 required subjects');
+ok((knowledge.facts || []).length >= 20, 'evidence library contains at least 20 normalized claims');
+(knowledge.facts || []).forEach((fact) => {
+  ok(subjectIds.has(fact.subjectId), `evidence claim ${fact.id} has a known subject`);
+  ok(evidenceLabels.has(fact.evidenceLabel), `evidence claim ${fact.id} uses an approved evidence label`);
+  ok(Array.isArray(fact.gameVersions) && fact.gameVersions.length > 0, `evidence claim ${fact.id} records version scope`);
+  ok(Array.isArray(fact.sourceRefs) && fact.sourceRefs.length > 0 && fact.sourceRefs.every((ref) => sourceIds.has(ref.sourceId)), `evidence claim ${fact.id} has valid sources`);
+  ok(Array.isArray(fact.prerequisites) && Array.isArray(fact.limitations) && fact.limitations.length > 0, `evidence claim ${fact.id} records prerequisites and limits`);
+  ok(Array.isArray(fact.relatedTutorialIds) && fact.relatedTutorialIds.every((id) => guideIds.includes(id)), `evidence claim ${fact.id} maps only to existing tutorials`);
+});
+(knowledge.coverage || []).forEach((item) => {
+  ok(subjectIds.has(item.subjectId), `coverage row ${item.subjectId} has a known subject`);
+  ok(['documented', 'partially documented', 'conflicting', 'missing'].includes(item.status), `coverage row ${item.subjectId} has an approved status`);
+  ok(Array.isArray(item.factIds) && item.factIds.every((id) => factIds.has(id)), `coverage row ${item.subjectId} references known facts`);
+  ok(Array.isArray(item.gaps) && item.gaps.length > 0, `coverage row ${item.subjectId} preserves remaining gaps`);
+});
+ok(knowledge22.schemaVersion === 1 && knowledge22.game === 'WWE 2K22', 'WWE 2K22 evidence stays in a version-specific library');
+ok((knowledge22.facts || []).length >= 4, 'WWE 2K22 evidence records the local archive and reference-tree findings');
+ok((knowledge22.facts || []).every((fact) => fact.evidenceLabel === 'verified-wwe2k22'), 'WWE 2K22 facts use a distinct historical-version evidence label');
+const mappedGuideIds = new Set((knowledge.facts || []).flatMap((fact) => fact.relatedTutorialIds || []));
+ok(guideIds.every((id) => mappedGuideIds.has(id)), 'all 49 tutorials are connected to formal evidence records');
+ok(read('app', 'assets', 'js', 'easy-guide.js').includes('Evidence and version scope'), 'Tutorials render evidence labels and version scope');
+ok(read('app', 'assets', 'js', 'handbook-reader.js').includes('Appendix F - Evidence and Coverage'), 'handbook consumes the evidence database as a live coverage appendix');
 [
   'alternate-attire-render',
   'ready-made-arena',
@@ -281,13 +327,21 @@ ok(read('app', 'assets', 'js', 'easy-guide.js').includes('visualCard') && read('
 });
 
 const aboutHtml = read('app', 'about.html');
-ok(aboutHtml.includes('v1.7 Major RC1'), 'About displays visible version 1.7 Major RC1');
+ok(aboutHtml.includes('v1.7.5'), 'About displays visible version 1.7.5');
 ok(aboutHtml.includes('Microsoft DirectXTex') && aboutHtml.includes('MIT License'), 'About credits the bundled open-source converter');
 ok(aboutHtml.includes('extraction helper') && aboutHtml.includes('MIT License'), 'About identifies the source-available extraction helper');
 ok(!normalHtmlFiles.some((file) => /internal production notes/i.test(read('app', file))), 'public app contains no internal production notes');
 ok(pkg.license === 'MIT' && read('LICENSE').includes('MIT License'), 'Aurora Forge is published under the MIT License');
-ok(cakHtml.includes('id="repackBuild"') && cakHtml.includes('Build New CAK') && preloadJs.includes('verifyRepackPackage') && mainJs.includes('archiveRepackager.buildCak'), 'Game Archive Explorer includes the CAK baker and verification controls');
-ok(cakHtml.includes('id="cakBrowseAll"') && cakHtml.includes('Open All Game CAKs') && cakJs.includes("openArchive('all-archives')") && preloadJs.includes('openAllCakArchives') && mainJs.includes("desktop:cak-explorer-open-all"), 'Game Archive Explorer opens every CAK in the configured game folder as one browser');
+ok(cakHtml.includes('id="repackBuild"') && cakHtml.includes('Build Game-Ready CAK') && preloadJs.includes('verifyRepackPackage') && mainJs.includes('archiveRepackager.buildCak'), 'Aurora CAK Foundry includes the CAK baker and verification controls');
+const modSuiteHtml = read('app', 'mod-suite.html');
+const modSuiteDataJs = read('app', 'assets', 'js', 'mod-suite-data.js');
+const modSuiteJs = read('app', 'assets', 'js', 'mod-suite.js');
+ok(modSuiteHtml.includes('Ready to Use') && modSuiteHtml.includes('Coming Soon'), 'WWE 2K26 Modding Hub explains working and upcoming tool status');
+ok((modSuiteDataJs.match(/status: 'active'/g) || []).length >= 8 && (modSuiteDataJs.match(/status: 'coming-soon'/g) || []).length >= 25, 'Modding Hub maps working tools and the Tribute replacement roadmap');
+ok(!/status: 'active'[^\n]+(?:profile:|tutorials\.html)/.test(modSuiteDataJs), 'Ready to Use entries are real operations, not plans or tutorial links');
+ok(modSuiteJs.includes('createModSuiteWorkspace') && modSuiteJs.includes('chooseAndAuditModFolder'), 'Mod Suite connects workspace creation and read-only auditing');
+ok(preloadJs.includes('createModSuiteWorkspace') && mainJs.includes("desktop:mod-suite-create-workspace") && mainJs.includes("desktop:mod-suite-choose-audit-folder"), 'desktop bridge exposes Mod Suite operations');
+ok(cakHtml.includes('id="cakBrowseAll"') && cakHtml.includes('Open All Game CAKs') && cakJs.includes("openArchive('all-archives')") && preloadJs.includes('openAllCakArchives') && mainJs.includes("desktop:cak-explorer-open-all"), 'Aurora CAK Foundry opens every CAK in the configured game folder as one browser');
 
 ok(mainJs.includes('contextIsolation: true') && mainJs.includes('sandbox: true') && mainJs.includes('nodeIntegration: false'), 'Electron renderer security settings are enabled');
 ok(!preloadJs.includes('require(\'fs\')') && !preloadJs.includes('require("fs")'), 'preload exposes no direct filesystem module');
@@ -310,6 +364,7 @@ const syntaxFiles = [
   'electron/main.js',
   'electron/preload.js',
   'electron/cak-reader.js',
+  'electron/cak20-reader.js',
   'app/assets/js/project-manager.js',
   'app/assets/js/setup.js',
   'app/assets/js/tool-center.js',
@@ -329,6 +384,7 @@ const syntaxFiles = [
   ,'scripts/build-standalone-windows.js'
   ,'scripts/build-cross-generation-path-catalog.js'
   ,'scripts/audit-extracted-layouts.js'
+  ,'scripts/analyze-2k22-format.js'
 ];
 syntaxFiles.forEach((file) => {
   const result = cp.spawnSync(process.execPath, ['--check', path.join(root, file)], { encoding: 'utf8' });
@@ -340,4 +396,4 @@ if (failures) {
   console.error(`\nAurora Forge verification failed with ${failures} problem(s).`);
   process.exit(1);
 }
-console.log('\nAurora Forge v1.7 Major RC1 source verification passed.');
+console.log('\nAurora Forge v1.7.5 source verification passed.');

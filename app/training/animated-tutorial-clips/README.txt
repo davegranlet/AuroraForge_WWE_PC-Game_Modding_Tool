@@ -1,3 +1,5 @@
+**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.
+
 Aurora Forge Knowledgebase Quick Clips
 
 These caption-based MP4 explainers support the matching chapters in the

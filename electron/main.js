@@ -4,7 +4,17 @@ const fs = require('fs');
 const cp = require('child_process');
 const { pathToFileURL } = require('url');
 const cakReader = require('./cak-reader');
+const cak20Reader = require('./cak20-reader');
 const archiveRepackager = require('./archive-repackager');
+const { createGameInstallRegistry } = require('./services/game-install-registry');
+const { createOperationJournal } = require('./services/operation-journal');
+const { createCapabilityRegistry } = require('./services/capability-registry');
+const { createSecureLoaderManager } = require('./services/secure-loader-manager');
+const { createSecureLoaderReleaseService } = require('./services/secure-loader-release');
+const { createLoaderDiagnostics } = require('./services/loader-diagnostics');
+const { createCakCollisionService } = require('./services/cak-collision-service');
+const { createModManifestManager } = require('./services/mod-manifest-manager');
+const secureDataCtrlLinkManifest = require('../app/data/compatibility/secure-datacrtllink.json');
 
 const APP_ROOT = path.join(__dirname, '..', 'app');
 const START_PAGE = process.env.AURORA_START_PAGE || 'index.html';
@@ -18,8 +28,25 @@ const DEFAULT_PROJECTS_DIR_NAME = 'Aurora Forge Projects';
 const DEFAULT_EXPORTS_DIR_NAME = 'Aurora Forge Exports';
 let lastDdsConverterOutputDir = '';
 let lastBuiltCakPath = '';
+let lastBuiltCakSource = '';
 let currentCakSession = null;
 let lastCakOutputDir = '';
+let currentPac19Archive = '';
+let lastPac19OutputDir = '';
+let lastCak20OutputDir = '';
+let selectedSecureLoaderSource = '';
+let workshopServiceCache = null;
+const MOD_SUITE_BAKEME_ROOTS = Object.freeze([
+  'Animation', 'AnimSystem', 'Arena', 'Audio', 'Belts', 'Characters', 'CreateShow',
+  'Cutscene', 'Entrances', 'Environment', 'GMMode', 'Hide', 'Logo', 'MatchCreator',
+  'MoveData', 'Movies', 'MSC', 'Particle', 'Props', 'Roster', 'Rules', 'Sdb',
+  'SharedGameplay', 'Stable', 'UI'
+]);
+const MOD_SUITE_RECOGNIZED_EXTENSIONS = Object.freeze(new Set([
+  '.adefs', '.bk2', '.cak', '.clip', '.clips', '.dds', '.hkt', '.hpl', '.jsfb',
+  '.jmtl', '.json', '.mcd', '.mdl', '.mtls', '.ogg', '.pck', '.png', '.txt',
+  '.wem', '.wav', '.ycl'
+]));
 const DDS_FORMATS = Object.freeze({
   R8_UNORM: 61,
   R8G8_UNORM: 49,
@@ -50,6 +77,8 @@ const TOOL_DEFINITIONS = Object.freeze({
   projectsFolder: { label: 'Projects folder', kind: 'directory' },
   exportsFolder: { label: 'Exports folder', kind: 'directory' },
   gameFolder: { label: 'WWE 2K26 game folder', kind: 'directory' },
+  game19Folder: { label: 'WWE 2K19 game folder', kind: 'directory' },
+  game20Folder: { label: 'WWE 2K20 game folder', kind: 'directory' },
   cakeView: { label: 'CakeView', kind: 'file' },
   tribute: { label: 'Tribute', kind: 'file' },
   blender: { label: 'Blender', kind: 'file' },
@@ -95,6 +124,93 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function isWwe2K26Running() {
+  if (process.platform !== 'win32') return false;
+  try {
+    const result = cp.spawnSync('tasklist.exe', ['/FI', 'IMAGENAME eq WWE2K26_x64.exe', '/NH', '/FO', 'CSV'], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+    return result.status === 0 && /WWE2K26_x64\.exe/i.test(String(result.stdout || ''));
+  } catch (_error) { return true; }
+}
+
+function workshopServices() {
+  if (workshopServiceCache) return workshopServiceCache;
+  const registry = createGameInstallRegistry(path.join(app.getPath('userData'), 'aurora-workshop.json'));
+  const journal = createOperationJournal(app.getPath('userData'));
+  const capabilities = createCapabilityRegistry({ installRegistry: registry, manifest: secureDataCtrlLinkManifest, isGameRunning: isWwe2K26Running, cakHelperPath, directXTexPath: () => bundledToolPath('texconv', 'texconv.exe') });
+  const loader = createSecureLoaderManager({ installRegistry: registry, capabilityRegistry: capabilities, journal, manifest: secureDataCtrlLinkManifest, isGameRunning: isWwe2K26Running });
+  const releases = createSecureLoaderReleaseService({ userDataPath: app.getPath('userData'), manifest: secureDataCtrlLinkManifest, sha256: capabilities.sha256, helperPath: path.join(__dirname, 'helpers', 'secure-loader-zip.ps1') });
+  const diagnostics = createLoaderDiagnostics({ installRegistry: registry });
+  const collisions = createCakCollisionService({ installRegistry: registry, openArchive: cakReader.openArchive, readDictionary: readCakDictionary });
+  const modManifest = createModManifestManager({ installRegistry: registry, journal, isGameRunning: isWwe2K26Running });
+  workshopServiceCache = { registry, journal, capabilities, loader, releases, diagnostics, collisions, modManifest };
+  return workshopServiceCache;
+}
+
+function auditModSuiteFolder(selectedPath) {
+  const selected = path.resolve(String(selectedPath || ''));
+  if (!selected || !fs.existsSync(selected) || !fs.statSync(selected).isDirectory()) throw new Error('The selected audit folder is unavailable.');
+  const childBakeMe = path.join(selected, 'BakeMe');
+  const root = fs.existsSync(childBakeMe) && fs.statSync(childBakeMe).isDirectory() ? childBakeMe : selected;
+  const knownRoots = new Set(MOD_SUITE_BAKEME_ROOTS.map((name) => name.toLowerCase()));
+  const roots = [];
+  const extensions = {};
+  let totalFiles = 0;
+  let totalDirectories = 0;
+  let totalBytes = 0;
+  const maxEntries = 100000;
+
+  function walkAudit(directory, rootRecord) {
+    if (totalFiles + totalDirectories >= maxEntries) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (totalFiles + totalDirectories >= maxEntries) break;
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        totalDirectories += 1;
+        walkAudit(fullPath, rootRecord);
+      } else if (entry.isFile()) {
+        const stat = fs.statSync(fullPath);
+        const extension = path.extname(entry.name).toLowerCase() || '[no extension]';
+        totalFiles += 1;
+        totalBytes += stat.size;
+        rootRecord.files += 1;
+        rootRecord.bytes += stat.size;
+        extensions[extension] = (extensions[extension] || 0) + 1;
+      }
+    }
+  }
+
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) continue;
+    const record = { name: entry.name, recognized: entry.isDirectory() && knownRoots.has(entry.name.toLowerCase()), files: 0, bytes: 0 };
+    if (entry.isDirectory()) {
+      totalDirectories += 1;
+      walkAudit(path.join(root, entry.name), record);
+    } else if (entry.isFile()) {
+      const fullPath = path.join(root, entry.name);
+      const stat = fs.statSync(fullPath);
+      const extension = path.extname(entry.name).toLowerCase() || '[no extension]';
+      record.files = 1;
+      record.bytes = stat.size;
+      totalFiles += 1;
+      totalBytes += stat.size;
+      extensions[extension] = (extensions[extension] || 0) + 1;
+    }
+    roots.push(record);
+  }
+  const recognizedRoots = roots.filter((item) => item.recognized).map((item) => item.name);
+  const unrecognizedRoots = roots.filter((item) => !item.recognized).map((item) => item.name);
+  const unknownExtensions = Object.keys(extensions).filter((extension) => extension !== '[no extension]' && !MOD_SUITE_RECOGNIZED_EXTENSIONS.has(extension));
+  const notes = [];
+  if (root !== selected) notes.push('A BakeMe child folder was detected and audited instead of the surrounding project folder.');
+  if (!recognizedRoots.length) notes.push('No recognized WWE 2K26 BakeMe roots were found. Confirm that the correct staging folder was selected.');
+  if (unrecognizedRoots.length) notes.push('Unrecognized top-level entries are not automatically unsafe, but should be documented before packaging.');
+  if (unknownExtensions.length) notes.push('Unrecognized extensions found: ' + unknownExtensions.sort().join(', ') + '.');
+  if (totalFiles + totalDirectories >= maxEntries) notes.push('The audit stopped at the 100,000-entry safety limit.');
+  if (!notes.length) notes.push('The folder uses recognized roots and file types. This structural check does not prove that binary records or IDs are correct.');
+  return { path: root, selectedPath: selected, scannedAt: new Date().toISOString(), totalFiles, totalDirectories, totalBytes, roots, recognizedRoots, unrecognizedRoots, extensions, notes };
+}
+
 function toolConfigPath() {
   return path.join(app.getPath('userData'), 'aurora-external-tools.json');
 }
@@ -125,6 +241,102 @@ function bundledToolPath(...parts) {
 
 function cakHelperPath() {
   return bundledToolPath('cak-helper', 'AuroraCakHelper.exe');
+}
+
+function pac19HelperPath() {
+  return bundledToolPath('pac19-helper', 'AuroraPac19Helper.exe');
+}
+
+function pac19GameFolder() {
+  const configured = readToolConfig().game19Folder || '';
+  if (configured && fs.existsSync(configured)) return configured;
+  const normalSteamPath = 'D:\\Program Files (x86)\\Steam\\steamapps\\common\\WWE 2K19';
+  return fs.existsSync(normalSteamPath) ? normalSteamPath : '';
+}
+
+function pac19OodlePath(archivePath = '') {
+  const candidates = [];
+  const gameFolder = pac19GameFolder();
+  if (gameFolder) candidates.push(path.join(gameFolder, 'oo2core_6_win64.dll'));
+  let cursor = archivePath ? path.dirname(path.resolve(archivePath)) : '';
+  for (let level = 0; cursor && level < 6; level += 1) {
+    candidates.push(path.join(cursor, 'oo2core_6_win64.dll'));
+    const parent = path.dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) || '';
+}
+
+function cak20GameFolder() {
+  const configured = readToolConfig().game20Folder || '';
+  if (configured && fs.existsSync(configured)) return configured;
+  const normalSteamPath = 'D:\\Program Files (x86)\\Steam\\steamapps\\common\\WWE2K20';
+  return fs.existsSync(normalSteamPath) ? normalSteamPath : '';
+}
+
+function cak20OodlePath() {
+  const gameFolder = cak20GameFolder();
+  const candidate = gameFolder ? path.join(gameFolder, 'oo2core_7_win64.dll') : '';
+  return candidate && fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : '';
+}
+
+function cak20ArchiveSummary() {
+  const gameFolder = cak20GameFolder();
+  if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) return [];
+  return fs.readdirSync(gameFolder, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.cak$/i.test(entry.name))
+    .map((entry) => {
+      const fullPath = path.join(gameFolder, entry.name);
+      const header = Buffer.alloc(4);
+      const fd = fs.openSync(fullPath, 'r');
+      try { fs.readSync(fd, header, 0, 4, 0); } finally { fs.closeSync(fd); }
+      const signature = header.toString('ascii');
+      return { name: entry.name, path: fullPath, bytes: fs.statSync(fullPath).size, signature };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name, undefined, { numeric: true }));
+}
+
+function openCak20Sessions() {
+  const archives = cak20ArchiveSummary().filter((archive) => archive.signature === 'FDIR');
+  return archives.map((archive) => cak20Reader.openArchive(archive.path));
+}
+
+function safeCak20RelativePath(file) {
+  const fallback = `Unresolved/${String(file.id).padStart(6, '0')}.bin`;
+  const normalized = String(file.name || fallback).replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalized || path.isAbsolute(normalized) || normalized.split('/').includes('..')) return fallback;
+  return normalized;
+}
+
+function cak20FileSummary(session, file) {
+  const expected = cak20Reader.expectedFirstWord(file);
+  return {
+    archiveName: session.archiveName,
+    id: file.id,
+    name: safeCak20RelativePath(file),
+    type: file.type || path.extname(file.name || '').replace('.', '').toUpperCase() || 'RAW',
+    storedSize: file.storedSize,
+    offset: file.offset,
+    extractable: Boolean(file.extractable && expected),
+    decodeRule: expected ? expected.source : 'coming-soon'
+  };
+}
+
+function runPac19Helper(request) {
+  const helper = pac19HelperPath();
+  if (!fs.existsSync(helper)) throw new Error('The WWE 2K19 PAC helper has not been built. Run npm run build:pac19-helper, then reopen Aurora Forge.');
+  const folder = fs.mkdtempSync(path.join(app.getPath('temp'), 'aurora-pac19-'));
+  const requestPath = path.join(folder, 'request.json');
+  fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
+  return new Promise((resolve, reject) => {
+    cp.execFile(helper, [requestPath], { windowsHide: true, maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
+      fs.rmSync(folder, { recursive: true, force: true });
+      if (error) return reject(new Error(String(stderr || stdout || error.message).trim()));
+      try { resolve(JSON.parse(String(stdout || '').trim())); }
+      catch (parseError) { reject(new Error(`The PAC helper returned an unreadable response: ${parseError.message}`)); }
+    });
+  });
 }
 
 function readToolConfig() {
@@ -365,7 +577,7 @@ function createWindow() {
       submenu: [
         { label: 'Tutorials', click: () => mainWindow.loadURL('wwe2k26://app/tutorials.html') },
         { type: 'separator' },
-        { label: 'About', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'About Aurora Forge', message: 'Aurora Forge', detail: 'Version 1.7 Major RC1 · Prompt Builder Edition\nA WWE 2K26 prompt-building and workflow-preparation workspace. Aurora Forge prepares prompts and handoff packs; your chosen AI creates the result.' }) }
+        { label: 'About', click: () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'About Aurora Forge', message: 'Aurora Forge', detail: 'Version 1.7.5 · Prompt Builder Edition\nA WWE 2K26 prompt-building and workflow-preparation workspace. Aurora Forge prepares prompts and handoff packs; your chosen AI creates the result.' }) }
       ]
     }
   ];
@@ -536,7 +748,13 @@ ipcMain.handle('desktop:cak-explorer-open-all', async () => {
     .sort((left, right) => path.basename(left).localeCompare(path.basename(right), undefined, { numeric: true }));
   if (!archivePaths.length) throw new Error('No .cak archives were found in the configured WWE 2K26 game folder.');
   const dictionary = readCakDictionary();
-  const sessions = archivePaths.map((archivePath) => cakReader.openArchive(archivePath, dictionary));
+  const sessions = [];
+  const rejectedArchives = [];
+  for (const archivePath of archivePaths) {
+    try { sessions.push(cakReader.openArchive(archivePath, dictionary)); }
+    catch (error) { rejectedArchives.push({ archive: path.basename(archivePath), error: error.message }); }
+  }
+  if (!sessions.length) throw new Error('Every CAK archive was rejected by the safety checks. No archive was opened.');
   const files = [];
   const folders = [];
   for (const session of sessions) {
@@ -560,9 +778,12 @@ ipcMain.handle('desktop:cak-explorer-open-all', async () => {
     folders,
     sessions,
     keyRecovered: sessions.some((session) => session.keyRecovered),
-    warnings: sessions.flatMap((session) => session.warnings.map((warning) => `${session.archiveName}: ${warning}`))
+    warnings: [
+      ...sessions.flatMap((session) => session.warnings.map((warning) => `${session.archiveName}: ${warning}`)),
+      ...rejectedArchives.map((item) => `${item.archive}: rejected safely — ${item.error}`)
+    ]
   };
-  return { ok: true, archiveCount: sessions.length, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'all' }) };
+  return { ok: true, archiveCount: sessions.length, rejectedArchives, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'all' }) };
 });
 
 ipcMain.handle('desktop:cak-explorer-search', async (_event, options) => {
@@ -648,6 +869,228 @@ ipcMain.handle('desktop:cak-explorer-open-output', async () => {
   return { ok: !error, error };
 });
 
+ipcMain.handle('desktop:pac19-status', async () => {
+  const gameFolder = pac19GameFolder();
+  const helper = pac19HelperPath();
+  const oodle = pac19OodlePath();
+  const executable = gameFolder ? path.join(gameFolder, 'WWE2K19_x64.exe') : '';
+  const ready = Boolean(gameFolder && fs.existsSync(executable) && oodle && fs.existsSync(helper));
+  return {
+    ready, gameFolder, oodle, helperReady: fs.existsSync(helper),
+    message: ready
+      ? 'WWE 2K19, its Oodle library, and the Aurora Forge PAC helper are ready.'
+      : !fs.existsSync(helper)
+        ? 'The PAC helper source is present but its executable still needs to be compiled.'
+        : !gameFolder ? 'Choose your WWE 2K19 installation folder.' : 'The selected folder must contain WWE2K19_x64.exe and oo2core_6_win64.dll.'
+  };
+});
+
+ipcMain.handle('desktop:pac19-choose-game-folder', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the WWE 2K19 game folder', defaultPath: pac19GameFolder() || undefined, properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths[0]) return { ok: false };
+  const selected = path.resolve(result.filePaths[0]);
+  if (!fs.existsSync(path.join(selected, 'WWE2K19_x64.exe')) || !fs.existsSync(path.join(selected, 'oo2core_6_win64.dll'))) throw new Error('Choose the folder containing WWE2K19_x64.exe and oo2core_6_win64.dll.');
+  const config = readToolConfig();
+  config.game19Folder = selected;
+  writeToolConfig(config);
+  return { ok: true, path: selected };
+});
+
+ipcMain.handle('desktop:pac19-choose-archive', async () => {
+  const gameFolder = pac19GameFolder();
+  const result = await dialog.showOpenDialog({
+    title: 'Choose a WWE 2K19 PAC', defaultPath: gameFolder ? path.join(gameFolder, 'pac') : undefined, properties: ['openFile'],
+    filters: [{ name: 'WWE PAC archives', extensions: ['pac'] }, { name: 'All files', extensions: ['*'] }]
+  });
+  return result.canceled || !result.filePaths[0] ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
+});
+
+ipcMain.handle('desktop:pac19-open', async (_event, archivePath) => {
+  const selected = path.resolve(String(archivePath || ''));
+  const response = await runPac19Helper({ action: 'inspect', archivePath: selected });
+  currentPac19Archive = selected;
+  return response;
+});
+
+ipcMain.handle('desktop:pac19-choose-output', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose a separate extraction folder', defaultPath: lastPac19OutputDir || app.getPath('documents'), properties: ['openDirectory', 'createDirectory'] });
+  if (result.canceled || !result.filePaths[0]) return { ok: false };
+  lastPac19OutputDir = path.resolve(result.filePaths[0]);
+  return { ok: true, path: lastPac19OutputDir };
+});
+
+ipcMain.handle('desktop:pac19-extract', async (_event, payload) => {
+  if (!currentPac19Archive) throw new Error('Open a PAC before extracting files.');
+  const outputRoot = path.resolve(String(payload?.outputRoot || ''));
+  const response = await runPac19Helper({ action: 'extract', archivePath: currentPac19Archive, oodlePath: pac19OodlePath(currentPac19Archive), outputRoot, entryIds: payload?.entryIds || [], overwrite: Boolean(payload?.overwrite) });
+  lastPac19OutputDir = outputRoot;
+  return response;
+});
+
+ipcMain.handle('desktop:pac19-open-output', async () => {
+  if (!lastPac19OutputDir || !fs.existsSync(lastPac19OutputDir)) throw new Error('No PAC output folder is available yet.');
+  const error = await shell.openPath(lastPac19OutputDir);
+  if (error) throw new Error(error);
+  return { ok: true };
+});
+
+ipcMain.handle('desktop:pac19-choose-replacement', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the edited replacement file', properties: ['openFile'], filters: [{ name: 'All files', extensions: ['*'] }] });
+  return result.canceled || !result.filePaths[0] ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
+});
+
+ipcMain.handle('desktop:pac19-replace', async (_event, payload) => {
+  if (!currentPac19Archive) throw new Error('Open a PAC before building a replacement.');
+  const parsed = path.parse(currentPac19Archive);
+  const result = await dialog.showSaveDialog({ title: 'Save the rebuilt PAC as a new file', defaultPath: path.join(parsed.dir, `${parsed.name}_aurora${parsed.ext || '.pac'}`), filters: [{ name: 'WWE PAC archives', extensions: ['pac'] }] });
+  if (result.canceled || !result.filePath) return { ok: false };
+  const outputPath = result.filePath.toLowerCase().endsWith('.pac') ? result.filePath : result.filePath + '.pac';
+  const response = await runPac19Helper({ action: 'replace', archivePath: currentPac19Archive, oodlePath: pac19OodlePath(currentPac19Archive), entryId: payload?.entryId, replacementPath: payload?.replacementPath, outputPath });
+  lastPac19OutputDir = path.dirname(outputPath);
+  return response;
+});
+
+ipcMain.handle('desktop:cak20-status', async () => {
+  const gameFolder = cak20GameFolder();
+  const executable = gameFolder ? path.join(gameFolder, 'WWE2K20_x64.exe') : '';
+  const oodle = cak20OodlePath();
+  const archives = cak20ArchiveSummary();
+  const installReady = Boolean(gameFolder && fs.existsSync(executable) && oodle && archives.length);
+  return {
+    ready: installReady,
+    engineReady: installReady,
+    rebuildReady: false,
+    gameFolder,
+    executable: fs.existsSync(executable) ? executable : '',
+    oodle,
+    archives,
+    message: installReady
+      ? 'WWE 2K20 is detected. Load the decoded CAK file list, choose an output folder, and extract verified file families.'
+      : !gameFolder
+        ? 'Choose your WWE 2K20 installation folder.'
+        : 'The selected folder must contain WWE2K20_x64.exe, oo2core_7_win64.dll, and bakedfile*.cak archives.'
+  };
+});
+
+ipcMain.handle('desktop:cak20-list-files', async (_event, options) => {
+  const query = String(options && options.query || '').trim().toLowerCase();
+  const archiveFilter = String(options && options.archiveName || '').trim().toLowerCase();
+  const sessions = openCak20Sessions();
+  const items = [];
+  let totalDecoded = 0;
+  let totalMatches = 0;
+  let extractableMatches = 0;
+  for (const session of sessions) {
+    totalDecoded += session.files.length;
+    if (archiveFilter && session.archiveName.toLowerCase() !== archiveFilter) continue;
+    for (const file of session.files) {
+      const summary = cak20FileSummary(session, file);
+      if (query && !summary.name.toLowerCase().includes(query) && !summary.type.toLowerCase().includes(query)) continue;
+      totalMatches += 1;
+      if (summary.extractable) extractableMatches += 1;
+      if (items.length < 500) items.push(summary);
+    }
+  }
+  return {
+    ok: true,
+    archives: sessions.map((session) => cak20Reader.publicSummary(session)),
+    items,
+    totalDecoded,
+    totalMatches,
+    extractableMatches,
+    totalShown: items.length,
+    truncated: totalMatches > items.length
+  };
+});
+
+ipcMain.handle('desktop:cak20-choose-output', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose a separate WWE 2K20 extraction folder', properties: ['openDirectory', 'createDirectory'] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const selected = path.resolve(result.filePaths[0]);
+  const gameFolder = cak20GameFolder();
+  if (gameFolder && isPathInside(selected, gameFolder)) throw new Error('Choose an extraction folder outside the WWE 2K20 game folder.');
+  lastCak20OutputDir = selected;
+  return { ok: true, path: selected };
+});
+
+ipcMain.handle('desktop:cak20-extract', async (_event, payload) => {
+  const outputRoot = path.resolve(String(payload && payload.outputRoot || lastCak20OutputDir || ''));
+  if (!outputRoot || !fs.existsSync(outputRoot) || !fs.statSync(outputRoot).isDirectory()) throw new Error('Choose a valid extraction folder.');
+  const gameFolder = cak20GameFolder();
+  if (gameFolder && isPathInside(outputRoot, gameFolder)) throw new Error('Extraction into the WWE 2K20 game folder is blocked.');
+  const extractAll = Boolean(payload && payload.all);
+  const selected = Array.isArray(payload && payload.entries) ? payload.entries : [];
+  if (!extractAll && (!selected.length || selected.length > 5000)) throw new Error('Choose between 1 and 5,000 files per extraction job.');
+  const wanted = extractAll ? null : new Map(selected.map((entry) => [`${String(entry.archiveName || '').toLowerCase()}::${Number(entry.id)}`, entry]));
+  const sessions = openCak20Sessions();
+  const results = [];
+  let requested = extractAll ? 0 : selected.length;
+  let totalBytes = 0;
+  for (const session of sessions) {
+    for (const file of session.files) {
+      const key = `${session.archiveName.toLowerCase()}::${file.id}`;
+      if (wanted && !wanted.has(key)) continue;
+      const expected = cak20Reader.expectedFirstWord(file);
+      if (extractAll && (!file.extractable || !expected)) continue;
+      if (extractAll) requested += 1;
+      if (!file.extractable || !expected) {
+        results.push({ ok: false, archive: session.archiveName, id: file.id, error: 'This entry needs one more decode rule before extraction.' });
+        continue;
+      }
+      totalBytes += file.storedSize;
+      const relative = safeCak20RelativePath(file);
+      const targetPath = path.resolve(outputRoot, relative);
+      if (!isPathInside(targetPath, outputRoot)) throw new Error('A selected file tried to write outside the output folder.');
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      if (fs.existsSync(targetPath) && !(payload && payload.overwrite)) {
+        results.push({ ok: false, archive: session.archiveName, id: file.id, path: targetPath, error: 'File already exists. Enable overwrite or choose another folder.' });
+        continue;
+      }
+      const data = cak20Reader.extractFile(session, file);
+      fs.writeFileSync(targetPath, data);
+      results.push({ ok: true, archive: session.archiveName, id: file.id, path: targetPath, bytes: data.length, rule: file.decodeSeedSource || '' });
+    }
+  }
+  if (extractAll && requested < 1) throw new Error('No verified WWE 2K20 files are available to extract yet.');
+  const missing = requested - results.length;
+  for (let index = 0; index < missing; index += 1) results.push({ ok: false, error: 'One selected entry was not found. Refresh the list and try again.' });
+  const succeeded = results.filter((item) => item.ok).length;
+  lastCak20OutputDir = outputRoot;
+  const report = [
+    'Aurora Forge WWE 2K20 CAK Extraction Report', '',
+    'Game folder: ' + gameFolder,
+    'Output: ' + outputRoot,
+    `Requested: ${requested}`, `Succeeded: ${succeeded}`, `Failed: ${results.length - succeeded}`, '',
+    ...results.map((item) => item.ok ? `OK  ${item.archive}  ${item.id}  ${item.bytes} bytes  ${item.path}` : `FAILED  ${item.archive || ''}  ${item.id || ''}  ${item.error}`)
+  ].join('\n');
+  fs.writeFileSync(path.join(outputRoot, 'Aurora_Forge_WWE2K20_Extraction_Report.txt'), report + '\n', 'utf8');
+  return { ok: succeeded === results.length, succeeded, failed: results.length - succeeded, total: results.length, outputRoot, results };
+});
+
+ipcMain.handle('desktop:cak20-open-output', async () => {
+  if (!lastCak20OutputDir || !fs.existsSync(lastCak20OutputDir)) throw new Error('No WWE 2K20 extraction output folder is available yet.');
+  const error = await shell.openPath(lastCak20OutputDir);
+  return { ok: !error, error };
+});
+
+ipcMain.handle('desktop:cak20-choose-game-folder', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the WWE 2K20 game folder', defaultPath: cak20GameFolder() || undefined, properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths[0]) return { ok: false };
+  const selected = path.resolve(result.filePaths[0]);
+  const exe = path.join(selected, 'WWE2K20_x64.exe');
+  const oodle = path.join(selected, 'oo2core_7_win64.dll');
+  const archives = fs.existsSync(selected) && fs.statSync(selected).isDirectory()
+    ? fs.readdirSync(selected, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.cak$/i.test(entry.name))
+    : [];
+  if (!fs.existsSync(exe) || !fs.existsSync(oodle) || !archives.length) {
+    throw new Error('Choose the folder containing WWE2K20_x64.exe, oo2core_7_win64.dll, and bakedfile*.cak archives.');
+  }
+  const config = readToolConfig();
+  config.game20Folder = selected;
+  writeToolConfig(config);
+  return { ok: true, path: selected };
+});
+
 ipcMain.handle('desktop:repackager-choose-source', async () => {
   const result = await dialog.showOpenDialog({ title: 'Choose the BakeMe folder to package', properties: ['openDirectory'] });
   return result.canceled || !result.filePaths.length ? { ok: false } : { ok: true, path: path.resolve(result.filePaths[0]) };
@@ -658,14 +1101,17 @@ ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable BakeMe folder first.');
   const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
   if (result.canceled || !result.filePath) return { ok: false };
-  const built = archiveRepackager.buildCak(source, result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak');
+  const built = archiveRepackager.buildCak(source, result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak', { oodlePath: resolveOodlePath(), helperPath: cakHelperPath() });
   lastBuiltCakPath = built.outputPath;
+  lastBuiltCakSource = source;
   return { ok: true, ...built };
 });
 
 ipcMain.handle('desktop:repackager-verify', async () => {
   if (!lastBuiltCakPath || !fs.existsSync(lastBuiltCakPath)) throw new Error('Build a new CAK first.');
-  return { ok: true, ...archiveRepackager.verifyCak(lastBuiltCakPath), outputPath: lastBuiltCakPath };
+  if (!lastBuiltCakSource || !fs.existsSync(lastBuiltCakSource)) throw new Error('The BakeMe source folder is no longer available for byte-for-byte verification.');
+  const expected = archiveRepackager.prepareScanPayloads(archiveRepackager.scanBakeFolder(lastBuiltCakSource), { oodlePath: resolveOodlePath(), helperPath: cakHelperPath() });
+  return { ok: true, ...archiveRepackager.verifyCak(lastBuiltCakPath, expected), outputPath: lastBuiltCakPath };
 });
 
 ipcMain.handle('desktop:repackager-open-output', async () => {
@@ -844,7 +1290,7 @@ ipcMain.handle('desktop:create-project-folder', async (_event, payload) => {
   folders.forEach((folder) => ensureDir(path.join(projectPath, folder)));
   const project = {
     app: 'Aurora Forge',
-    release: '1.7 Major RC1 Prompt Builder Edition',
+    release: '1.7.5 Prompt Builder Edition',
     name: projectName,
     type: projectType,
     notes: payload && payload.notes ? payload.notes : '',
@@ -915,3 +1361,122 @@ ipcMain.handle('desktop:open-project-json', async () => {
   assertProjectJsonShape(project);
   return { ok: true, path: filePath, project };
 });
+
+ipcMain.handle('desktop:mod-suite-create-workspace', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Choose where to create the Aurora Forge mod workspace',
+    defaultPath: defaultProjectsPath(),
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const parent = path.resolve(result.filePaths[0]);
+  const workspace = uniquePath(parent, 'Aurora Forge WWE 2K26 Mod');
+  const bakeMe = path.join(workspace, 'BakeMe');
+  const supportFolders = ['00_Backups', '01_Source_References', '02_Working_Files', '03_Profiles_JSON', '04_Audit_Reports', '05_Test_Builds', '06_Release_Package'];
+  ensureDir(workspace);
+  supportFolders.forEach((folder) => ensureDir(path.join(workspace, folder)));
+  MOD_SUITE_BAKEME_ROOTS.forEach((folder) => ensureDir(path.join(bakeMe, folder)));
+  const manifest = {
+    app: 'Aurora Forge',
+    schema: 'aurora-forge-mod-suite-workspace-v1',
+    game: 'WWE 2K26',
+    created_at: new Date().toISOString(),
+    status: 'planning',
+    bake_me_roots: MOD_SUITE_BAKEME_ROOTS,
+    validation: { clean_baseline_recorded: false, source_backup_complete: false, structural_audit_passed: false, cak_verified: false, in_game_test_passed: false },
+    notes: []
+  };
+  fs.writeFileSync(path.join(workspace, 'aurora-forge-mod-suite.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(path.join(workspace, 'README_WORKSPACE.txt'), [
+    'AURORA FORGE WWE 2K26 MOD WORKSPACE', '',
+    'This workspace contains no WWE game assets. Add only files you extracted or created lawfully.', '',
+    'Safety order:',
+    '1. Put untouched references and tool exports outside BakeMe and preserve a separate backup.',
+    '2. Store editable work in 02_Working_Files and portable profiles in 03_Profiles_JSON.',
+    '3. Put only final staged paths under BakeMe.',
+    '4. Run the Mod Suite BakeMe audit before building a CAK.',
+    '5. Build a new CAK; do not overwrite an installed archive.',
+    '6. Record controlled in-game results in 04_Audit_Reports.', '',
+    'A structurally valid folder does not prove that an ID, hash, JSFB record, animation, or save edit is correct.'
+  ].join('\n') + '\n', 'utf8');
+  const openError = await shell.openPath(workspace);
+  return { ok: !openError, path: workspace, error: openError };
+});
+
+ipcMain.handle('desktop:mod-suite-choose-audit-folder', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose a BakeMe or mod workspace folder to audit', properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  return { ok: true, report: auditModSuiteFolder(result.filePaths[0]) };
+});
+
+ipcMain.handle('desktop:mod-suite-open-folder', async (_event, folderPath) => {
+  const target = path.resolve(String(folderPath || ''));
+  if (!target || !fs.existsSync(target) || !fs.statSync(target).isDirectory()) throw new Error('The selected folder is unavailable.');
+  const error = await shell.openPath(target);
+  return { ok: !error, path: target, error };
+});
+
+ipcMain.handle('desktop:workshop-capabilities', async () => workshopServices().capabilities.summarize());
+
+ipcMain.handle('desktop:workshop-choose-wwe2k26', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose your WWE 2K26 installation', properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const root = path.resolve(result.filePaths[0]);
+  const executable = path.join(root, secureDataCtrlLinkManifest.hostExecutable);
+  if (!fs.existsSync(executable) || !fs.lstatSync(executable).isFile() || fs.lstatSync(executable).isSymbolicLink()) throw new Error('That folder does not contain a regular WWE2K26_x64.exe file.');
+  const executableSha256 = workshopServices().capabilities.sha256(executable);
+  workshopServices().registry.set('wwe2k26', root, executableSha256 === secureDataCtrlLinkManifest.gameExeSha256 ? { lastVerifiedExeSha256: executableSha256 } : {});
+  return { ok: true, capabilities: workshopServices().capabilities.summarize() };
+});
+
+ipcMain.handle('desktop:workshop-choose-secure-loader', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the verified Secure DataCtrlLink dinput8.dll', properties: ['openFile'], filters: [{ name: 'Secure DataCtrlLink', extensions: ['dll'] }] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const selected = path.resolve(result.filePaths[0]);
+  const stat = fs.lstatSync(selected);
+  if (!stat.isFile() || stat.isSymbolicLink() || path.basename(selected).toLowerCase() !== 'dinput8.dll') throw new Error('Select the regular release file named dinput8.dll.');
+  const sha256 = workshopServices().capabilities.sha256(selected);
+  if (sha256 !== secureDataCtrlLinkManifest.dllSha256) throw new Error('Selection blocked: this DLL checksum is not the reviewed v1.0.0 release checksum.');
+  selectedSecureLoaderSource = selected;
+  return { ok: true, name: path.basename(selected), sha256, version: secureDataCtrlLinkManifest.loaderVersion };
+});
+
+ipcMain.handle('desktop:workshop-choose-secure-loader-zip', async () => {
+  const result = await dialog.showOpenDialog({ title: 'Choose the reviewed Secure DataCtrlLink v1.0.0 release ZIP', properties: ['openFile'], filters: [{ name: 'Secure DataCtrlLink release', extensions: ['zip'] }] });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const staged = workshopServices().releases.validateAndStage(result.filePaths[0]);
+  workshopServices().releases.cleanupStagedDll(selectedSecureLoaderSource);
+  selectedSecureLoaderSource = staged.dllPath;
+  return { ok: true, zipSha256: staged.zipSha256, dllSha256: staged.dllSha256, version: staged.version, entryCount: staged.entryCount };
+});
+
+ipcMain.handle('desktop:workshop-download-secure-loader', async (_event, request) => {
+  if (!request || request.confirm !== true || Object.keys(request).some((key) => key !== 'confirm')) throw new Error('Explicit download confirmation is required.');
+  const staged = await workshopServices().releases.downloadAndStage();
+  workshopServices().releases.cleanupStagedDll(selectedSecureLoaderSource);
+  selectedSecureLoaderSource = staged.dllPath;
+  return { ok: true, zipSha256: staged.zipSha256, dllSha256: staged.dllSha256, version: staged.version, entryCount: staged.entryCount };
+});
+
+ipcMain.handle('desktop:workshop-install-secure-loader', async (_event, request) => {
+  if (!request || request.confirm !== true || Object.keys(request).some((key) => key !== 'confirm')) throw new Error('Explicit install confirmation is required.');
+  if (!selectedSecureLoaderSource) throw new Error('Choose and verify the Secure DataCtrlLink release DLL first.');
+  const installedSource = selectedSecureLoaderSource;
+  const operation = workshopServices().loader.install(installedSource);
+  selectedSecureLoaderSource = '';
+  workshopServices().releases.cleanupStagedDll(installedSource);
+  return { ok: true, operation, capabilities: workshopServices().capabilities.summarize() };
+});
+
+ipcMain.handle('desktop:workshop-rollback-secure-loader', async (_event, request) => {
+  if (!request || request.confirm !== true || typeof request.operationId !== 'string' || Object.keys(request).some((key) => !['confirm', 'operationId'].includes(key))) throw new Error('A verified operation and explicit rollback confirmation are required.');
+  const operation = workshopServices().loader.rollback(request.operationId);
+  return { ok: true, operation, capabilities: workshopServices().capabilities.summarize() };
+});
+
+ipcMain.handle('desktop:workshop-journal', async () => workshopServices().journal.list(50));
+ipcMain.handle('desktop:workshop-redacted-report', async () => workshopServices().journal.redactedReport(workshopServices().capabilities.summarize()));
+ipcMain.handle('desktop:workshop-loader-diagnostics', async () => workshopServices().diagnostics.read());
+ipcMain.handle('desktop:workshop-cak-collisions', async () => workshopServices().collisions.scan());
+ipcMain.handle('desktop:workshop-mod-manifest', async () => workshopServices().modManifest.read());
+ipcMain.handle('desktop:workshop-save-mod-manifest', async (_event, request) => workshopServices().modManifest.save(request));

@@ -9,6 +9,7 @@
   var video = document.getElementById('easy-guide-video');
   var videoTitle = document.getElementById('easy-guide-video-title');
   var activeGroup = 'All';
+  var evidenceLibrary = null;
 
   function escapeHtml(value) {
     return String(value)
@@ -49,6 +50,42 @@
     }).filter(Boolean);
     if (!links.length) return '';
     return '<div class="easy-guide-box sources"><h3>Sources and videos</h3><ul>' + links.join('') + '</ul></div>';
+  }
+
+  function evidenceForGuide(guideId) {
+    if (!evidenceLibrary || !Array.isArray(evidenceLibrary.facts)) return [];
+    return evidenceLibrary.facts.filter(function (fact) {
+      return Array.isArray(fact.relatedTutorialIds) && fact.relatedTutorialIds.indexOf(guideId) !== -1;
+    });
+  }
+
+  function evidenceBox(guideId) {
+    var facts = evidenceForGuide(guideId);
+    if (!facts.length) {
+      return '<div class="easy-guide-box evidence pending"><h3>Evidence status</h3><p>No formal evidence record is mapped to this lesson yet. Treat game- or tool-specific details as unverified.</p></div>';
+    }
+    var rows = facts.map(function (fact) {
+      var versions = Array.isArray(fact.gameVersions) ? fact.gameVersions.join(', ') : 'Version not recorded';
+      var limits = Array.isArray(fact.limitations) ? fact.limitations.join(' ') : '';
+      var sourceIndex = {};
+      (evidenceLibrary.sources || []).forEach(function (source) { sourceIndex[source.id] = source; });
+      var refs = (fact.sourceRefs || []).map(function (ref) {
+        var source = sourceIndex[ref.sourceId] || { title: ref.sourceId };
+        var href = safeUrl(source.url);
+        var labels = [];
+        if (ref.timestamp) labels.push('procedure ' + ref.timestamp);
+        if (ref.outcomeTimestamp) labels.push('outcome ' + ref.outcomeTimestamp);
+        if (ref.locator) labels.push(ref.locator);
+        var title = href ? '<a href="' + escapeHtml(href) + '" target="_blank" rel="noreferrer">' + escapeHtml(source.title) + '</a>' : escapeHtml(source.title);
+        return title + (labels.length ? ' (' + escapeHtml(labels.join('; ')) + ')' : '');
+      }).join('; ');
+      return '<li><div class="evidence-badges"><span>' + escapeHtml(fact.evidenceLabel) + '</span><span>' + escapeHtml(versions) + '</span></div>' +
+        '<strong>' + escapeHtml(fact.fact) + '</strong>' +
+        (refs ? '<small><b>Evidence:</b> ' + refs + '</small>' : '') +
+        (limits ? '<small><b>Limit:</b> ' + escapeHtml(limits) + '</small>' : '') +
+      '</li>';
+    });
+    return '<div class="easy-guide-box evidence"><h3>Evidence and version scope</h3><ul>' + rows.join('') + '</ul></div>';
   }
 
   function mediaVideo(value) {
@@ -104,6 +141,7 @@
         '<div class="easy-guide-box steps"><h3>Do this</h3>' + list(guide.steps) + '</div>' +
         '<div class="easy-guide-box good"><h3>You should see</h3>' + bulletList(guide.good) + '</div>' +
         '<div class="easy-guide-box stop"><h3>Stop and check</h3>' + bulletList(guide.stop) + '</div>' +
+        evidenceBox(guide.id) +
         visualCard(guide.visual) +
         sourceList(guide.sources) +
       '</div>' +
@@ -176,4 +214,18 @@
     guideList.querySelectorAll('details').forEach(function (item) { item.open = false; });
   });
   render();
+
+  fetch('data/wwe2k26-modding-facts.json', { cache: 'no-store' })
+    .then(function (response) {
+      if (!response.ok) throw new Error('Evidence library returned ' + response.status);
+      return response.json();
+    })
+    .then(function (library) {
+      evidenceLibrary = library;
+      render();
+    })
+    .catch(function () {
+      evidenceLibrary = null;
+      render();
+    });
 })();

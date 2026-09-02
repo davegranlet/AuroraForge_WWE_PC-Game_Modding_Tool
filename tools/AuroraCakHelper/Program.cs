@@ -12,7 +12,16 @@ internal static class Program
     {
         try
         {
-            if (args.Length != 1) throw new InvalidOperationException("Pass exactly one Aurora Forge extraction-request JSON file.");
+            if (args.Length != 1) throw new InvalidOperationException("Pass exactly one Aurora Forge request JSON file.");
+            using var document = JsonDocument.Parse(File.ReadAllText(args[0]));
+            if (document.RootElement.TryGetProperty("action", out var action) && string.Equals(action.GetString(), "compress", StringComparison.OrdinalIgnoreCase))
+            {
+                var compressionRequest = document.RootElement.Deserialize<CompressionRequest>(JsonOptions)
+                    ?? throw new InvalidOperationException("The compression request is empty.");
+                var compressionResult = Compress(compressionRequest);
+                Console.WriteLine(JsonSerializer.Serialize(compressionResult));
+                return compressionResult.Ok ? 0 : 2;
+            }
             var request = JsonSerializer.Deserialize<ExtractionRequest>(File.ReadAllText(args[0]), JsonOptions)
                 ?? throw new InvalidOperationException("The extraction request is empty.");
             var results = Extract(request);
@@ -24,6 +33,26 @@ internal static class Program
             Console.Error.WriteLine(error.Message);
             return 1;
         }
+    }
+
+    private static CompressionResponse Compress(CompressionRequest request)
+    {
+        var inputPath = Path.GetFullPath(Required(request.InputPath, "Compression input path"));
+        var outputPath = Path.GetFullPath(Required(request.OutputPath, "Compression output path"));
+        var oodlePath = Path.GetFullPath(Required(request.OodlePath, "Game compressor path"));
+        if (!File.Exists(inputPath)) throw new FileNotFoundException("The compression input was not found.", inputPath);
+        var original = File.ReadAllBytes(inputPath);
+        using var codec = new GameCodec(oodlePath);
+        var compressor = request.Compressor ?? 8;
+        var level = request.Level ?? 6;
+        if (compressor is < 0 or > 13) throw new InvalidDataException("Oodle compressor must be between 0 and 13.");
+        if (level is < -4 or > 9) throw new InvalidDataException("Oodle compression level must be between -4 and 9.");
+        var compressed = codec.Compress(original, compressor, level);
+        var recovered = codec.Decompress(compressed, original.Length);
+        if (!recovered.AsSpan().SequenceEqual(original)) throw new InvalidDataException("Oodle compression did not survive an immediate byte-for-byte round trip.");
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        File.WriteAllBytes(outputPath, compressed);
+        return new CompressionResponse(true, outputPath, original.Length, compressed.Length, true);
     }
 
     private static List<ExtractionResult> Extract(ExtractionRequest request)
@@ -170,19 +199,19 @@ internal static class Program
     }
 }
 
-internal sealed class GameDecompressor : IDisposable
+internal class GameDecompressor : IDisposable
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate long DecompressDelegate(IntPtr input, long inputSize, IntPtr output, long outputSize, int fuzzSafe, int checkCrc, int verbosity, IntPtr decodeBuffer, long decodeBufferSize, IntPtr callback, IntPtr callbackUserData, IntPtr decoderMemory, long decoderMemorySize, int threadPhase);
 
-    private readonly IntPtr _library;
+    protected readonly IntPtr Library;
     private readonly DecompressDelegate _decompress;
 
     internal GameDecompressor(string path)
     {
         if (!File.Exists(path)) throw new FileNotFoundException("The game decompressor was not found.", path);
-        _library = NativeLibrary.Load(path);
-        _decompress = Marshal.GetDelegateForFunctionPointer<DecompressDelegate>(NativeLibrary.GetExport(_library, "OodleLZ_Decompress"));
+        Library = NativeLibrary.Load(path);
+        _decompress = Marshal.GetDelegateForFunctionPointer<DecompressDelegate>(NativeLibrary.GetExport(Library, "OodleLZ_Decompress"));
     }
 
     internal byte[] Decompress(ReadOnlySpan<byte> input, int outputSize)
@@ -200,10 +229,39 @@ internal sealed class GameDecompressor : IDisposable
         finally { outputHandle.Free(); sourceHandle.Free(); }
     }
 
-    public void Dispose() { if (_library != IntPtr.Zero) NativeLibrary.Free(_library); }
+    public void Dispose() { if (Library != IntPtr.Zero) NativeLibrary.Free(Library); }
+}
+
+internal sealed class GameCodec : GameDecompressor
+{
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate long CompressDelegate(int compressor, IntPtr input, long inputSize, IntPtr output, int level, IntPtr options, IntPtr dictionaryBase, IntPtr lrm, IntPtr scratchMemory, long scratchSize);
+    private readonly CompressDelegate _compress;
+
+    internal GameCodec(string path) : base(path)
+    {
+        _compress = Marshal.GetDelegateForFunctionPointer<CompressDelegate>(NativeLibrary.GetExport(Library, "OodleLZ_Compress"));
+    }
+
+    internal byte[] Compress(ReadOnlySpan<byte> input, int compressor = 8, int level = 6)
+    {
+        var source = input.ToArray();
+        var output = new byte[checked(source.Length + source.Length / 16 + 256)];
+        var sourceHandle = GCHandle.Alloc(source, GCHandleType.Pinned);
+        var outputHandle = GCHandle.Alloc(output, GCHandleType.Pinned);
+        try
+        {
+            var compressedSize = _compress(compressor, sourceHandle.AddrOfPinnedObject(), source.Length, outputHandle.AddrOfPinnedObject(), level, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0);
+            if (compressedSize <= 0 || compressedSize > output.Length) throw new InvalidDataException($"The game compressor returned invalid size {compressedSize}.");
+            return output.AsSpan(0, checked((int)compressedSize)).ToArray();
+        }
+        finally { outputHandle.Free(); sourceHandle.Free(); }
+    }
 }
 
 internal sealed record ExtractionRequest(string? ArchivePath, string? OodlePath, string? OutputRoot, uint ArchiveKey, bool Overwrite, List<ExtractionEntry>? Entries);
 internal sealed record ExtractionEntry(int Id, long Offset, long StoredSize, long ExpandedSize, bool Compressed, bool Protected, string? RelativePath);
 internal sealed record ExtractionResult(bool Ok, int Id, string Path, long Bytes, string Error);
 internal sealed record ExtractionResponse([property: JsonPropertyName("results")] List<ExtractionResult> Results);
+internal sealed record CompressionRequest(string? Action, string? InputPath, string? OutputPath, string? OodlePath, int? Compressor, int? Level);
+internal sealed record CompressionResponse(bool Ok, string Path, long OriginalBytes, long StoredBytes, bool RoundTripVerified);

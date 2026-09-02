@@ -1,3 +1,5 @@
+**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.
+
 # Aurora Forge Release 1.7 Major RC1
 
 Aurora Forge remains a prompt generator and workflow-preparation workspace: it builds detailed instructions and supporting project files, while the user chooses which compatible AI or creative tool performs the final task.

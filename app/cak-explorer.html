@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
-<title>Aurora Forge - Game Archive Explorer</title>
+<title>Aurora Forge - Aurora CAK Foundry</title>
 <link rel="stylesheet" href="assets/css/style.css?v=20260807-r160h">
 </head>
 <body class="desktop-studio-shell">
@@ -24,7 +24,7 @@
     <div class="app-sidebar-card"><div class="mini-label">Safety rule</div><strong>Read - Copy - Check</strong><span>Archives are opened read-only. Extracted files go somewhere else.</span></div>
   </aside>
   <main class="app-main">
-    <section class="app-topbar"><div><div class="eyebrow">Aurora Forge - Built-in tools</div><h1>Game Archive Explorer</h1><p class="sub">Browse and extract files from your own WWE 2K26 CAK archives without changing the game files.</p></div></section>
+    <section class="app-topbar"><div><div class="eyebrow">Aurora Forge - Built-in tools</div><h1>Aurora CAK Foundry</h1><p class="sub">Browse and extract files from your own WWE 2K26 CAK archives without changing the game files.</p></div></section>
     <div class="wrap app-wrap cak-explorer-wrap">
       <section class="ai-hero hero-glow app-hero cak-hero">
         <div><div class="part-label">Free local archive access</div><h2>Find the file. Copy it out. Leave the archive untouched.</h2><p>Aurora Forge reads the selected archive and uses the Oodle library already included with your installed game. It does not bundle game files or write back into a CAK.</p></div>
@@ -85,13 +85,15 @@
 
       <pre id="cakDevDetails" hidden>No archive is open.</pre>
 
-      <section class="ai-panel app-panel">
-        <div class="section-label" style="margin-top:0;">CAK Baker</div>
-        <h2>Build a new CAK from a BakeMe folder</h2>
-        <p>Choose the folder whose contents belong in the archive. Aurora Forge excludes the selected folder's own name, then preserves every folder, relative path, and file inside the new <code>.cak</code>.</p>
+      <section class="ai-panel app-panel" id="cak-baker">
+        <div class="section-label" style="margin-top:0;">Aurora CAK Foundry</div>
+        <h2>Rebuild an extracted mod folder into a game-ready CAK</h2>
+        <p>Extract files above, edit them without changing their relative paths, then choose that output folder here. Aurora Forge excludes the selected folder's own name and rebuilds its contents as a protected WWE 2K26 FDIR archive.</p>
+        <p>The saved <code>.cak</code> filename is part of WWE 2K26's encryption key. Aurora derives the correct v9.9 key from the final filename automatically, so you may choose any name—but do not rename the CAK after building it. Rebuild it under the new name instead.</p>
+        <p>A valid <code>_textures.tdb</code> is preserved when supplied. If none exists, Aurora adds a safe empty version-6 texture database, matching the root metadata used by working CakeView archives.</p>
         <div class="cak-path-row"><code id="repackSourcePath">No BakeMe folder selected.</code><button id="repackChooseSource" class="ai-btn secondary" type="button">Choose BakeMe Folder</button></div>
-        <div class="ai-actions"><button id="repackBuild" class="ai-btn" type="button" disabled>Build New CAK</button><button id="repackVerify" class="ai-btn secondary" type="button" disabled>Verify New CAK</button><button id="repackOpenOutput" class="ai-btn secondary" type="button" disabled>Open Output Folder</button></div>
-        <p class="cak-message">The source folder stays unchanged. Aurora Forge always writes a separate CAK file.</p>
+        <div class="ai-actions"><button id="repackBuild" class="ai-btn" type="button" disabled>Build Game-Ready CAK</button><button id="repackVerify" class="ai-btn secondary" type="button" disabled>Verify Every Payload</button><button id="repackOpenOutput" class="ai-btn secondary" type="button" disabled>Open Output Folder</button></div>
+        <p class="cak-message">The source folder stays unchanged. The rebuild uses hashed virtual paths, protected payloads, FDIR v9 metadata, and independent byte-for-byte recovery checks.</p>
         <p id="repackMessage" class="cak-message" role="status"></p>
       </section>
 

@@ -1,73 +1,49 @@
-# Aurora Forge FAQ
+**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.
+
+# Aurora Forge and DataCtrlLink FAQ
+
+This is the canonical provenance statement for Aurora Forge v1.7.5.
 
 ## What is Aurora Forge?
 
-Aurora Forge is a prompt-building workspace for WWE 2K26 creation and modding projects. You choose or describe what you want to make, and Aurora Forge turns those choices into clear, structured instructions and supporting handoff files.
+Aurora Forge is a local WWE PC modding workspace. It combines guided prompt builders, project organization, archive and texture tools, evidence-backed tutorials, and carefully labeled experimental mod-management features.
 
-## Is Aurora Forge an AI chatbot?
+## What is Aurora CAK Foundry?
 
-No. Aurora Forge does not work like ChatGPT, Claude, or Gemini. It prepares the request you can give to a compatible AI tool of your choice.
+Aurora CAK Foundry is Aurora Forge’s `.cak` extractor, browser, rebuilder, baker, and verifier. It reads original archives without modifying them, extracts selected files elsewhere, and creates a separate modded `.cak` from a user-selected `BakeMe` folder. Its verification pass reopens the finished archive and recovers every stored payload byte-for-byte.
 
-## Does Aurora Forge answer my prompt?
+## Did AI invent DataCtrlLink?
 
-No. Aurora Forge builds and organizes the prompt. Your chosen AI or image tool performs the request after you copy or export it.
+No. DataCtrlLink was already a working, human-created plugin before AI became involved. The developer asked AI to help audit and secure their own existing work.
 
-## What does Aurora Forge generate?
+## Why did the audit inspect the compiled plugin instead of starting with its source?
 
-Depending on the builder, it can generate a finished prompt, project brief, checklist, profile or mapping information, project JSON, reference notes, and a handoff pack.
+The audit was intentionally designed around what an ordinary user or attacker could inspect in the released compiled files. Supplying the original source at the beginning would have defeated that test. After the compiled-code audit established what could be learned and what needed protection, the developer supplied the intended behavior and directed the security-focused replacement work.
 
-## Why not type directly into an AI tool?
+## Was third-party software examined?
 
-You can, but a short request often leaves important decisions unstated. Aurora Forge guides you through WWE 2K26-specific choices and turns them into a consistent, detailed request that is easier for another tool to follow.
+Yes. Compiled third-party software and observable game/tool behavior were examined to understand interoperability requirements.
 
-## How does Aurora Forge improve a prompt?
+No Tribute, PWM, or CakeHook source code was available, copied, translated, or included. The project does not claim a formal clean-room process. The accurate description is an independent, security-focused interoperability implementation based on the developer’s own original work.
 
-It adds useful structure: the goal, required details, constraints, things to preserve or avoid, output expectations, mapping information, and validation notes.
+## How is testing handled?
 
-## Do I need to understand prompt engineering?
+Tests validate compiled programs and packaged outputs. Source review alone is not treated as proof. Release claims are separated into source verification, synthetic workflow tests, real-file tests, clean-package launch tests, and user-performed in-game confirmation.
 
-No. The builders ask for practical project choices and assemble the prompt for you. You can still review and edit the finished text.
+## What does Secure DataCtrlLink support in v1.7.5?
 
-## Which AI platforms can I use?
+Aurora Forge includes fail-closed setup, checksum compatibility checks, verified installation, operation journaling, rollback, bounded diagnostics, experimental manifest ordering, and experimental CAK collision reporting for the reviewed Secure DataCtrlLink release profile bundled as metadata.
 
-You can use any compatible text or image AI that accepts the exported instructions and required reference files. Aurora Forge is not tied to one provider.
+It does not force-install on unknown executable hashes. Support is limited to explicitly reviewed profiles; “all WWE 2K26 versions” is a roadmap goal, not a v1.7.5 claim.
 
-## Can I edit the generated prompt?
+## Does Aurora Forge bundle WWE or proprietary game files?
 
-Yes. Review it in Aurora Forge where available, or edit the copied/downloaded text before using it.
+No. It does not bundle WWE executables, game CAKs, extracted game assets, or Oodle. Windows extraction uses the Oodle library from the user’s own installed game.
 
-## Can I copy or export it?
+## Is Aurora Forge affiliated with WWE, 2K, Visual Concepts, Tribute, PWM, or CakeHook?
 
-Yes. Builders provide copy, text download, project, or handoff-pack options depending on the workflow.
-
-## What does the repackager do?
-
-It gathers an extracted mod project into one portable ZIP, adds a file-and-checksum manifest, and verifies the completed package. It does not edit or replace the game's original CAK archives.
-
-## Does Aurora Forge send my prompt to an AI automatically?
-
-No. Your prompts stay under your control until you decide to copy, export, or upload them elsewhere.
-
-## What can I make with it?
-
-Aurora Forge is focused on WWE 2K26 workflows such as characters and CAWs, face textures, masks, tattoos, gear, logos, belts, entrances, materials, arenas, factions, and reference cleanup.
-
-## Is Aurora Forge a research tool?
-
-No. It includes a local knowledgebase and workflow guidance to support creation and modding, but research is not the product.
-
-## What is the difference between a prompt generator and a chatbot?
-
-A chatbot receives a request and tries to produce the final answer or asset. A prompt generator helps you build a better request, then lets you choose the system that will carry it out.
-
-## Who is Aurora Forge for?
-
-It is for WWE 2K26 creators and modders who want more complete prompts, repeatable project organization, practical handoff files, and workflow guidance without needing to become prompt-engineering experts.
+No. Aurora Forge and Secure DataCtrlLink are independent community projects and are not affiliated with or endorsed by those parties.
 
 ## Is Aurora Forge open source?
 
-Yes. Aurora Forge and its extraction-helper source are available under the MIT License. Required third-party license notices are included with the project.
-
-## What is the simplest way to explain Aurora Forge?
-
-Aurora Forge prepares the instructions. Your chosen AI executes them.
+Yes. Aurora Forge and its first-party helper source are released under the MIT License. Required third-party notices remain included.

@@ -169,7 +169,7 @@ function parseFiles(buffer, expected, stringSize, folderCount, archiveSize, payl
     const payloadInsideArchive = offset >= BigInt(payloadStart) && offset + BigInt(storedSize) <= BigInt(archiveSize);
     const externalCatalogEntry = offset === 0n;
     if (stringOffset >= stringSize || folderIndex >= Math.max(1, folderCount) || (!payloadInsideArchive && !externalCatalogEntry)) {
-      throw new Error('A CAK file record contains an unsafe offset or size.');
+      throw new Error(`A CAK file record contains an unsafe offset or size (record ${files.length}, offset ${offset}, stored ${storedSize}, expanded ${expandedSize}, archive ${archiveSize}).`);
     }
     const chunks = [];
     for (let index = 0; index < chunkCount; index += 1) chunks.push({ end: buffer.readUInt32LE(cursor + 34 + index * 4), flag: buffer[cursor + 34 + chunkCount * 4 + index] });

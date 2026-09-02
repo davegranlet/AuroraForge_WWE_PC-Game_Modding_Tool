@@ -1,3 +1,5 @@
+**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.
+
 # Aurora Forge 1.6.0 RC1 — Prompt Builder Edition
 
 Aurora Forge is a WWE 2K26 prompt-building and workflow-preparation workspace. It helps a user turn project choices into a detailed prompt and supporting handoff pack. The user chooses where to use that prompt; Aurora Forge does not act as the AI that creates the final artwork.
