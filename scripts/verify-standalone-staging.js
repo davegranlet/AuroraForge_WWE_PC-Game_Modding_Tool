@@ -6,7 +6,9 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const variants = [
   { id: 'cak', page: 'cak-explorer.html', required: ['assets/js/cak-explorer.js', 'data/cak-known-paths.json', 'tools/cak-helper/AuroraCakHelper.exe'] },
-  { id: 'dds', page: 'dds-converter.html', required: ['assets/js/dds-converter.js', 'tools/texconv/texconv.exe'] }
+  { id: 'dds', page: 'dds-converter.html', required: ['assets/js/dds-converter.js', 'tools/texconv/texconv.exe'] },
+  { id: 'pac19', page: 'pac19-explorer.html', required: ['assets/js/pac19-explorer.js', 'tools/pac19-helper/AuroraPac19Helper.exe', 'tools/pac19-helper/THIRD-PARTY-NOTICES.md'] },
+  { id: 'cak20', page: 'cak20-explorer.html', required: ['assets/js/cak20-explorer.js'] }
 ];
 
 for (const variant of variants) {

@@ -1,6 +1,6 @@
 param(
   [string]$AppFolder = "dist\Aurora Forge-win32-x64",
-  [string]$ZipName = "Aurora-Forge-1.7Major-RC1-Windows-x64.zip"
+  [string]$ZipName = "Aurora-Forge-v1.7.5-Windows-x64.zip"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +26,8 @@ if (!(Test-Path $resources)) { throw "Missing Electron resources folder." }
 if (!(Test-Path $locales)) { throw "Missing Electron locales folder." }
 
 $readme = @"
+**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.
+
 Aurora Forge — Portable Windows App
 
 How to run:
@@ -42,18 +44,31 @@ Recommended workflow:
 5. Use Tutorials for short lessons, animated videos, troubleshooting, and advanced reference downloads.
 6. Take the exported prompt to your chosen compatible AI, then validate the resulting files in CakeView and in game.
 
-Version: 1.7 Major RC1
+Version: 1.7.5
 Edition: Prompt Builder Edition
 
 Aurora Forge prepares instructions and supporting files. It is not an AI chatbot
 and does not automatically send your prompt to an AI provider.
 
-The Game Archive Explorer reads selected CAK archives without changing them.
+The Aurora CAK Foundry reads selected CAK archives without changing them.
 It writes only to a separate output folder and uses the Oodle library from your
 own installed game. No game archive or Oodle DLL is bundled in Aurora Forge.
 "@
 $readmePath = Join-Path $AppFolder "README_RUN_PORTABLE_APP.txt"
 $readme | Set-Content -Path $readmePath -Encoding UTF8
+
+# Preserve Electron's own LICENSE file and add the project's license and release documents under distinct names.
+Copy-Item -LiteralPath "LICENSE" -Destination (Join-Path $AppFolder "AURORA-FORGE-LICENSE.txt") -Force
+Copy-Item -LiteralPath "FAQ.md" -Destination (Join-Path $AppFolder "FAQ.md") -Force
+Copy-Item -LiteralPath "RELEASE_NOTES_1.7.5.md" -Destination (Join-Path $AppFolder "RELEASE_NOTES_1.7.5.md") -Force
+Copy-Item -LiteralPath "CAK_FOUNDRY_RELEASE_NOTES_1.7.5.md" -Destination (Join-Path $AppFolder "CAK_FOUNDRY_RELEASE_NOTES_1.7.5.md") -Force
+Copy-Item -LiteralPath "INSTALLATION_AND_ROLLBACK.md" -Destination (Join-Path $AppFolder "INSTALLATION_AND_ROLLBACK.md") -Force
+
+$thirdParty = Join-Path $AppFolder "THIRD-PARTY-NOTICES"
+if (!(Test-Path $thirdParty)) { New-Item -ItemType Directory -Path $thirdParty | Out-Null }
+Copy-Item -LiteralPath "app\tools\texconv\LICENSE.txt" -Destination (Join-Path $thirdParty "DirectXTex-LICENSE.txt") -Force
+Copy-Item -LiteralPath "app\tools\texconv\SOURCE.txt" -Destination (Join-Path $thirdParty "DirectXTex-SOURCE.txt") -Force
+Copy-Item -LiteralPath "app\tools\pac19-helper\THIRD-PARTY-NOTICES.md" -Destination (Join-Path $thirdParty "AuroraPac19Helper-THIRD-PARTY-NOTICES.md") -Force
 
 $outDir = "portable-release"
 if (!(Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }

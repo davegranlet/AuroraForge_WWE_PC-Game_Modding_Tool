@@ -4,7 +4,7 @@ const cp = require('child_process');
 
 const root = path.join(__dirname, '..');
 const appFolder = path.join(root, 'dist', 'Aurora Forge-win32-x64');
-const zipPath = path.join(root, 'portable-release', 'Aurora-Forge-1.7Major-RC1-Windows-x64.zip');
+const zipPath = path.join(root, 'portable-release', 'Aurora-Forge-v1.7.5-Windows-x64.zip');
 const asarPath = path.join(appFolder, 'resources', 'app.asar');
 const unpackedTools = path.join(appFolder, 'resources', 'app.asar.unpacked', 'app', 'tools');
 
@@ -26,6 +26,12 @@ assert(exists(appFolder, 'Aurora Forge.exe'), 'portable EXE exists');
 assert(exists(appFolder, 'resources'), 'resources folder exists');
 assert(exists(appFolder, 'locales'), 'locales folder exists');
 assert(exists(appFolder, 'README_RUN_PORTABLE_APP.txt'), 'portable runtime README exists');
+assert(exists(appFolder, 'AURORA-FORGE-LICENSE.txt'), 'Aurora Forge MIT license exists');
+assert(exists(appFolder, 'FAQ.md'), 'canonical FAQ exists');
+assert(exists(appFolder, 'RELEASE_NOTES_1.7.5.md'), 'v1.7.5 release notes exist');
+assert(exists(appFolder, 'CAK_FOUNDRY_RELEASE_NOTES_1.7.5.md'), 'Aurora CAK Foundry release notes exist');
+assert(exists(appFolder, 'INSTALLATION_AND_ROLLBACK.md'), 'installation and rollback guide exists');
+assert(exists(appFolder, 'THIRD-PARTY-NOTICES', 'DirectXTex-LICENSE.txt'), 'DirectXTex license exists');
 
 const hasAsar = exists(appFolder, 'resources', 'app.asar');
 const hasUnpackedApp = exists(appFolder, 'resources', 'app');
@@ -57,6 +63,12 @@ try {
 
   assert(hasExact('Aurora Forge.exe'), 'portable ZIP contains EXE');
   assert(hasExact('README_RUN_PORTABLE_APP.txt'), 'portable ZIP contains runtime README');
+  assert(hasExact('AURORA-FORGE-LICENSE.txt'), 'portable ZIP contains Aurora Forge MIT license');
+  assert(hasExact('FAQ.md'), 'portable ZIP contains canonical FAQ');
+  assert(hasExact('RELEASE_NOTES_1.7.5.md'), 'portable ZIP contains release notes');
+  assert(hasExact('CAK_FOUNDRY_RELEASE_NOTES_1.7.5.md'), 'portable ZIP contains Aurora CAK Foundry release notes');
+  assert(hasExact('INSTALLATION_AND_ROLLBACK.md'), 'portable ZIP contains rollback instructions');
+  assert(hasExact('THIRD-PARTY-NOTICES/DirectXTex-LICENSE.txt'), 'portable ZIP contains DirectXTex license');
   assert(hasPrefix('resources/'), 'portable ZIP contains required Electron resources runtime entries');
   assert(hasExact('resources/app.asar.unpacked/app/tools/cak-helper/AuroraCakHelper.exe'), 'portable ZIP contains runnable unpacked CAK helper');
   assert(hasExact('resources/app.asar.unpacked/app/tools/texconv/texconv.exe'), 'portable ZIP contains runnable unpacked DirectXTex converter');
@@ -94,6 +106,9 @@ try {
   assert(containsSuffix('app/project-manager.html'), 'packaged runtime contains consolidated Projects');
   assert(containsSuffix('app/creative-studios.html'), 'packaged runtime contains Prompt Builders hub');
   assert(containsSuffix('app/tools.html'), 'packaged runtime contains Tools hub');
+  assert(containsSuffix('app/mod-suite.html'), 'packaged runtime contains Mod Suite');
+  assert(containsSuffix('app/assets/js/mod-suite-data.js'), 'packaged runtime contains Mod Suite capability registry');
+  assert(containsSuffix('app/assets/js/mod-suite.js'), 'packaged runtime contains Mod Suite interface logic');
   assert(containsSuffix('app/faq.html'), 'packaged runtime contains prompt-generator FAQ');
   assert(containsSuffix('app/complete-character-modding-guide.html'), 'packaged runtime contains complete character guide');
   assert(containsSuffix('app/data/wwe2k26-modding-facts.json'), 'packaged runtime contains current modding fact library');
@@ -108,8 +123,8 @@ try {
   assert(containsSuffix('app/character-viewer.html'), 'packaged runtime contains Character Viewer');
   assert(containsSuffix('app/dds-converter.html'), 'packaged runtime contains automatic DDS Converter');
   assert(containsSuffix('app/assets/js/dds-converter.js'), 'packaged runtime contains DDS Converter interface logic');
-  assert(containsSuffix('app/cak-explorer.html'), 'packaged runtime contains Game Archive Explorer');
-  assert(containsSuffix('app/assets/js/cak-explorer.js'), 'packaged runtime contains Game Archive Explorer interface logic');
+  assert(containsSuffix('app/cak-explorer.html'), 'packaged runtime contains Aurora CAK Foundry');
+  assert(containsSuffix('app/assets/js/cak-explorer.js'), 'packaged runtime contains Aurora CAK Foundry interface logic');
   assert(containsSuffix('electron/archive-repackager.js'), 'packaged runtime contains the verified project repackager');
   assert(containsSuffix('app/data/cak-known-paths.json'), 'packaged runtime contains the real-path CAK catalog');
   assert(containsSuffix('app/tools/cak-helper/AuroraCakHelper.exe'), 'packaged runtime contains self-contained x64 CAK extraction helper');
