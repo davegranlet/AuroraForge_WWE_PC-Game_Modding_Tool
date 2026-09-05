@@ -22,6 +22,14 @@ internal static class Program
                 Console.WriteLine(JsonSerializer.Serialize(compressionResult));
                 return compressionResult.Ok ? 0 : 2;
             }
+            if (document.RootElement.TryGetProperty("action", out action) && string.Equals(action.GetString(), "decompress", StringComparison.OrdinalIgnoreCase))
+            {
+                var decompressionRequest = document.RootElement.Deserialize<DecompressionRequest>(JsonOptions)
+                    ?? throw new InvalidOperationException("The decompression request is empty.");
+                var decompressionResult = Decompress(decompressionRequest);
+                Console.WriteLine(JsonSerializer.Serialize(decompressionResult));
+                return decompressionResult.Ok ? 0 : 2;
+            }
             var request = JsonSerializer.Deserialize<ExtractionRequest>(File.ReadAllText(args[0]), JsonOptions)
                 ?? throw new InvalidOperationException("The extraction request is empty.");
             var results = Extract(request);
@@ -55,6 +63,36 @@ internal static class Program
         return new CompressionResponse(true, outputPath, original.Length, compressed.Length, true);
     }
 
+    private static DecompressionResponse Decompress(DecompressionRequest request)
+    {
+        const long maxInputBytes = 512L * 1024 * 1024;
+        const int maxOutputBytes = 1024 * 1024 * 1024;
+        var inputPath = Path.GetFullPath(Required(request.InputPath, "Decompression input path"));
+        var outputPath = Path.GetFullPath(Required(request.OutputPath, "Decompression output path"));
+        var oodlePath = Path.GetFullPath(Required(request.OodlePath, "Game decompressor path"));
+        if (!File.Exists(inputPath)) throw new FileNotFoundException("The decompression input was not found.", inputPath);
+        var offset = request.InputOffset ?? 0;
+        var fileLength = new FileInfo(inputPath).Length;
+        var storedBytes = request.InputBytes ?? checked(fileLength - offset);
+        var expandedBytes = request.OutputBytes ?? throw new InvalidOperationException("Expected decompressed byte count is required.");
+        if (offset < 0 || storedBytes <= 0 || storedBytes > maxInputBytes || offset > fileLength || storedBytes > fileLength - offset)
+            throw new InvalidDataException("The selected compressed byte range is outside safe input bounds.");
+        if (expandedBytes <= 0 || expandedBytes > maxOutputBytes) throw new InvalidDataException("The expected decompressed size is outside safe output bounds.");
+        byte[] stored;
+        using (var input = new FileStream(inputPath, FileMode.Open, FileAccess.Read, FileShare.Read)) stored = ReadAt(input, offset, storedBytes);
+        using var decompressor = new GameDecompressor(oodlePath);
+        var recovered = decompressor.Decompress(stored, expandedBytes);
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var temporary = outputPath + ".aurora-part";
+        try
+        {
+            File.WriteAllBytes(temporary, recovered);
+            File.Move(temporary, outputPath, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        return new DecompressionResponse(true, outputPath, stored.Length, recovered.Length);
+    }
+
     private static List<ExtractionResult> Extract(ExtractionRequest request)
     {
         var archivePath = Path.GetFullPath(Required(request.ArchivePath, "Archive path"));
@@ -77,7 +115,11 @@ internal static class Program
                 ValidateEntry(entry, archive.Length);
                 var stored = ReadAt(archive, entry.Offset, entry.StoredSize);
                 if (entry.Protected) RecoverPayload(stored, DerivePayloadKey(request.ArchiveKey, checked((uint)entry.StoredSize), checked((ulong)entry.Offset)));
-                var recovered = entry.Compressed ? decompressor!.Decompress(stored, checked((int)entry.ExpandedSize)) : stored;
+                var recovered = entry.Compressed
+                    ? entry.Chunks is { Count: > 1 }
+                        ? DecompressChunks(decompressor!, stored, checked((int)entry.ExpandedSize), entry.Chunks)
+                        : decompressor!.Decompress(stored, checked((int)entry.ExpandedSize))
+                    : stored;
                 if (recovered.LongLength != entry.ExpandedSize) throw new InvalidDataException("The recovered file size did not match the archive catalog.");
 
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -104,6 +146,38 @@ internal static class Program
         if (entry.StoredSize > int.MaxValue || entry.ExpandedSize > int.MaxValue) throw new InvalidDataException("This individual file is too large for the extraction helper.");
         if (entry.Offset > archiveLength || entry.StoredSize > archiveLength - entry.Offset) throw new InvalidDataException("An archive entry extends beyond the selected CAK.");
         if (!entry.Compressed && entry.StoredSize != entry.ExpandedSize) throw new InvalidDataException("An uncompressed file has inconsistent sizes.");
+        if (entry.Chunks is { Count: > 0 })
+        {
+            long previous = 0;
+            foreach (var chunk in entry.Chunks)
+            {
+                if (chunk.End <= previous || chunk.End > entry.StoredSize) throw new InvalidDataException("An archive entry has invalid compressed chunk boundaries.");
+                previous = chunk.End;
+            }
+            if (previous != entry.StoredSize) throw new InvalidDataException("The compressed chunk table does not reach the stored payload end.");
+            if (entry.Compressed && entry.Chunks.Count != (entry.ExpandedSize + 0xFFFFF) / 0x100000) throw new InvalidDataException("The compressed chunk count does not match the expanded payload size.");
+        }
+    }
+
+    private static byte[] DecompressChunks(GameDecompressor decompressor, byte[] stored, int expandedSize, List<ExtractionChunk> chunks)
+    {
+        using var output = new MemoryStream(expandedSize);
+        var storedStart = 0;
+        var remaining = expandedSize;
+        foreach (var chunk in chunks)
+        {
+            var storedEnd = checked((int)chunk.End);
+            var storedLength = storedEnd - storedStart;
+            var expandedLength = Math.Min(0x100000, remaining);
+            var recovered = storedLength == expandedLength
+                ? stored.AsSpan(storedStart, storedLength).ToArray()
+                : decompressor.Decompress(stored.AsSpan(storedStart, storedLength), expandedLength);
+            output.Write(recovered);
+            storedStart = storedEnd;
+            remaining -= expandedLength;
+        }
+        if (remaining != 0) throw new InvalidDataException("The compressed chunks did not produce the catalog's expanded size.");
+        return output.ToArray();
     }
 
     private static byte[] ReadAt(FileStream stream, long offset, long size)
@@ -260,8 +334,11 @@ internal sealed class GameCodec : GameDecompressor
 }
 
 internal sealed record ExtractionRequest(string? ArchivePath, string? OodlePath, string? OutputRoot, uint ArchiveKey, bool Overwrite, List<ExtractionEntry>? Entries);
-internal sealed record ExtractionEntry(int Id, long Offset, long StoredSize, long ExpandedSize, bool Compressed, bool Protected, string? RelativePath);
+internal sealed record ExtractionEntry(int Id, long Offset, long StoredSize, long ExpandedSize, bool Compressed, bool Protected, string? RelativePath, List<ExtractionChunk>? Chunks);
+internal sealed record ExtractionChunk(long End, byte Flag);
 internal sealed record ExtractionResult(bool Ok, int Id, string Path, long Bytes, string Error);
 internal sealed record ExtractionResponse([property: JsonPropertyName("results")] List<ExtractionResult> Results);
 internal sealed record CompressionRequest(string? Action, string? InputPath, string? OutputPath, string? OodlePath, int? Compressor, int? Level);
 internal sealed record CompressionResponse(bool Ok, string Path, long OriginalBytes, long StoredBytes, bool RoundTripVerified);
+internal sealed record DecompressionRequest(string? Action, string? InputPath, string? OutputPath, string? OodlePath, long? InputOffset, long? InputBytes, int? OutputBytes);
+internal sealed record DecompressionResponse(bool Ok, string Path, long StoredBytes, long ExpandedBytes);

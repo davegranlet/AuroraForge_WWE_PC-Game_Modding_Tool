@@ -11,6 +11,17 @@
     return `${bytes >= 100 || unit === 0 ? bytes.toFixed(0) : bytes.toFixed(1)} ${units[unit]}`;
   };
   function message(id, text, kind) { const el = byId(id); el.textContent = text || ''; el.className = `cak-message ${kind || ''}`; }
+  function showProgress(progress) {
+    const total = Math.max(0, Number(progress && progress.total) || 0);
+    const processed = Math.min(total, Math.max(0, Number(progress && progress.processed) || 0));
+    const percent = total ? Math.floor(processed * 100 / total) : 0;
+    byId('cakProgressPanel').hidden = false;
+    byId('cakProgressBar').value = percent;
+    byId('cakProgressBar').textContent = `${percent}%`;
+    byId('cakProgressPercent').textContent = `${percent}%`;
+    byId('cakProgressTitle').textContent = progress.phase === 'complete' ? 'Extraction complete' : (progress.archive ? `Extracting ${progress.archive}` : 'Preparing extraction...');
+    byId('cakProgressDetail').textContent = `${processed.toLocaleString()} / ${total.toLocaleString()} files · ${(Number(progress.succeeded) || 0).toLocaleString()} succeeded · ${(Number(progress.failed) || 0).toLocaleString()} failed${progress.archiveCount ? ` · archive ${progress.archiveIndex} / ${progress.archiveCount}` : ''}`;
+  }
   function updateSelected() {
     byId('cakSelectedCount').textContent = String(state.selected.size);
     byId('cakExtract').disabled = !state.selected.size || !state.outputPath;
@@ -94,6 +105,7 @@
   }
   async function initialize() {
     if (!api) { message('cakOpenMessage', 'Open this page inside the portable Aurora Forge app.', 'bad'); return; }
+    if (api.onCakExtractionProgress && !state.progressSubscribed) { state.progressSubscribed = true; api.onCakExtractionProgress(showProgress); }
     try {
       const status = await api.getCakExplorerStatus();
       const ready = status.ready && Boolean(status.oodle);
@@ -131,25 +143,22 @@
   byId('cakExtractAllArchives').addEventListener('click', async () => {
     const paths = [...byId('cakArchiveSelect').options].map((option) => option.value).filter(Boolean);
     if (!paths.length) { message('cakOpenMessage', 'Choose the WWE 2K26 game folder at the top of this page first.', 'bad'); return; }
-    const chosen = await api.chooseCakOutput();
-    if (!chosen || !chosen.ok) return;
-    if (!window.confirm(`Extract every safely named file from all ${paths.length} CAK archives?\n\nOutput: ${chosen.path}\n\nThe original archives will not be changed.`)) return;
     const button = byId('cakExtractAllArchives');
     button.disabled = true;
-    let succeeded = 0;
-    let failed = 0;
     try {
-      for (let index = 0; index < paths.length; index += 1) {
-        const opened = await api.openCakArchive(paths[index]);
-        message('cakOpenMessage', `Archive ${index + 1} of ${paths.length}: ${opened.summary.archiveName}...`, 'working');
-        const result = await api.extractCakEntries({ all: true, outputRoot: chosen.path, overwrite: true });
-        succeeded += result.succeeded || 0;
-        failed += result.failed || 0;
-      }
-      message('cakOpenMessage', `Finished all ${paths.length} archives: ${succeeded.toLocaleString()} files extracted; ${failed.toLocaleString()} failed.`, failed ? 'bad' : 'good');
+      message('cakOpenMessage', `Preflighting names and payloads across all ${paths.length} CAKs...`, 'working');
+      const opened = await api.openAllCakArchives();
+      if (opened.rejectedArchives.length) throw new Error(`${opened.rejectedArchives.length} CAK archive(s) failed validation. Extract All stopped before writing files.`);
+      if (opened.summary.rawHashPayloads) throw new Error(`${opened.summary.rawHashPayloads.toLocaleString()} stored payload(s) still lack genuine paths. Extract All stopped before writing files.`);
+      const chosen = await api.chooseCakOutput();
+      if (!chosen || !chosen.ok) return;
+      if (!window.confirm(`Extract every stored payload from all ${paths.length} CAK archives into one merged /root folder?\n\nOutput: ${chosen.path}\n\nVerified game archive order controls same-path collisions. The original archives will not be changed.`)) return;
+      showProgress({ processed: 0, total: opened.summary.readyFiles, succeeded: 0, failed: 0, phase: 'extracting', archiveIndex: 0, archiveCount: paths.length });
+      const result = await api.extractCakEntries({ all: true, outputRoot: chosen.path, overwrite: true });
+      message('cakOpenMessage', `Finished all ${paths.length} archives: ${result.succeeded.toLocaleString()} files extracted into one merged /root folder; ${result.failed.toLocaleString()} failed.`, result.failed ? 'bad' : 'good');
       byId('cakOpenOutput').disabled = false;
     } catch (error) {
-      message('cakOpenMessage', `Stopped after ${succeeded.toLocaleString()} files: ${error.message}`, 'bad');
+      message('cakOpenMessage', error.message, 'bad');
     } finally {
       button.disabled = false;
     }

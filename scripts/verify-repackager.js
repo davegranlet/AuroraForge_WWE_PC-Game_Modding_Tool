@@ -3,7 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { buildCak, verifyCak, scanBakeFolder, encodePairs, encodeStringTable, crc32cBuffer, derivePayloadKey, protectPayload, recoverPayload } = require('../electron/archive-repackager');
-const { decodePairs } = require('../electron/cak-reader');
+const { decodePairs, decodeStringTable } = require('../electron/cak-reader');
 const { deriveArchiveKeyV99 } = require('../electron/cak-v99-key');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aurora-cak-bake-'));
 try {
@@ -17,6 +17,9 @@ try {
   for (const [name, expectedKey] of Object.entries(keyVectors)) {
     if (deriveArchiveKeyV99(name) !== expectedKey) throw new Error(`WWE 2K26 filename-key derivation failed for ${name}.`);
   }
+  // Regression: this name produces an inverted FNV lane with a leading zero.
+  // The seed must still be padded to the fixed 32 bytes required by v9.9.
+  if (deriveArchiveKeyV99('mod23.cak') !== 0xf755512d) throw new Error('WWE 2K26 filename-key derivation lost a leading seed zero.');
   const source = path.join(root, 'BakeMe');
   fs.mkdirSync(path.join(source, 'Characters', '100_Test', 'Textures'), { recursive: true });
   fs.writeFileSync(path.join(source, 'Characters', '100_Test', 'profile.jsfb'), Buffer.from('JSFB test profile'));
@@ -26,8 +29,9 @@ try {
   const payloadKey = derivePayloadKey(key, sample.length, 0x12345n);
   if (!recoverPayload(protectPayload(sample, payloadKey), payloadKey).equals(sample)) throw new Error('Payload protection round trip failed.');
   const plainNames = Buffer.from('0000000006474d4d6f6465000d5f74657874757265732e746462000b506172616d732e6a73666200', 'hex');
-  const cakeViewNames = Buffer.from('0000000006c6cee8894883000d287c14e6fd316bc3a8575cd414000b9764ca70744e8c21844fc300', 'hex');
-  if (!encodeStringTable(plainNames).equals(cakeViewNames)) throw new Error('WWE 2K26 string-table encoding does not match the known-working CakeView archive.');
+  const encodedNames = Buffer.from('0000000006c6cee8894883000d287c14e6fd316bc3a8575cd414000b9764ca70744e8c21844fc300', 'hex');
+  if (!encodeStringTable(plainNames).equals(encodedNames)) throw new Error('WWE 2K26 string-table encoding does not match the verified archive vector.');
+  if (!decodeStringTable(encodedNames).equals(plainNames)) throw new Error('WWE 2K26 string-table decoding did not restore the verified names.');
   const output = path.join(root, 'aurora-test.cak');
   const result = buildCak(source, output);
   verifyCak(output, scanBakeFolder(source));

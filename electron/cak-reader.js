@@ -114,6 +114,46 @@ function decodePairs(input, initialKey) {
   return output;
 }
 
+function decodeStringTable(input) {
+  const output = Buffer.from(input);
+  const u64 = (value) => BigInt.asUintN(64, value);
+  const rol64 = (value, shiftValue) => {
+    const shift = BigInt(shiftValue & 63);
+    return shift === 0n ? u64(value) : u64((u64(value) << shift) | (u64(value) >> (64n - shift)));
+  };
+  let cursor = 1;
+  let processed = 0;
+  while (cursor + 1 < output.length) {
+    cursor += 1;
+    const length = output[cursor];
+    cursor += 1;
+    if (cursor + length > output.length) throw new Error('The CAK string table contains an invalid name length.');
+    const recordPosition = BigInt(processed + 2);
+    for (let index = 0; index < length; index += 1) {
+      let state = u64(BigInt(index) * -0x61c8864680b583ebn);
+      state = u64(state ^ u64((recordPosition << 32n) ^ recordPosition));
+      let mask = u64((state ^ (state >> 33n)) * 0xc2b2ae3d27d4eb4fn);
+      mask = rol64(mask, index);
+      mask = u64((mask ^ (mask >> 29n)) * 0x165667b19e3779f9n);
+      mask = u64(mask ^ (mask >> 32n));
+      const shifted = (output[cursor] - Number((mask >> 24n) & 0xffn)) & 0xff;
+      output[cursor] = shifted ^ Number(mask & 0xffn);
+      cursor += 1;
+    }
+    processed += 2 + length;
+  }
+  return output;
+}
+
+function readStringRecord(table, offset) {
+  if (!Number.isInteger(offset) || offset < 0 || offset >= table.length) return '';
+  const length = table[offset];
+  const end = offset + 1 + length;
+  if (end >= table.length || table[end] !== 0) return '';
+  const value = table.subarray(offset + 1, end).toString('utf8');
+  return value.includes('\0') ? '' : value.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+}
+
 function readAt(fd, offset, size) {
   const buffer = Buffer.alloc(size);
   const count = fs.readSync(fd, buffer, 0, size, Number(offset));
@@ -209,6 +249,11 @@ function safeGeneratedName(file) {
   return `file_${String(file.id).padStart(6, '0')}_${file.hash || 'nohash'}${extensionFor(file)}`;
 }
 
+function safeGeneratedFolder(file, folders) {
+  const folder = folders[file.folderIndex];
+  return `folder_${String(file.folderIndex).padStart(6, '0')}_${folder && folder.hash || 'nohash'}`;
+}
+
 function fnv1a64(value) {
   let hash = 0xcbf29ce484222325n;
   for (const char of String(value)) {
@@ -216,6 +261,17 @@ function fnv1a64(value) {
     hash = BigInt.asUintN(64, hash * 0x100000001b3n);
   }
   return hash.toString(16).padStart(16, '0');
+}
+
+function hashVerifiedPath(value, expectedHash) {
+  return Boolean(value && expectedHash && expectedHash !== '0000000000000000' && fnv1a64(value.toLowerCase()) === expectedHash);
+}
+
+function extractionPath(value) {
+  let result = String(value || '').replace(/\\/g, '/');
+  if (/\.tex$/i.test(result)) result = result.slice(0, -4) + '.dds';
+  if (/^Root\//i.test(result)) result = result.slice(result.indexOf('/') + 1);
+  return result;
 }
 
 function buildNameCandidates(root, targetHashes) {
@@ -290,17 +346,26 @@ function openArchive(archivePath, dictionary = {}) {
     const fileHashes = parseHashes(readDecoded(w[8], w[6]), w[0]);
     const fileTable = parseFiles(readDecoded(w[11], w[9]), w[0], w[15], w[1], archiveSize, w[20]);
     const folderTable = parseFolders(readDecoded(w[14], w[12]), w[1]);
+    const stringTable = decodeStringTable(readDecoded(w[17], w[15]));
     for (const item of fileHashes) if (item.index >= 0 && item.index < fileTable.files.length) fileTable.files[item.index].hash = item.hash;
     for (const item of folderHashes) if (item.index >= 0 && item.index < folderTable.folders.length) folderTable.folders[item.index].hash = item.hash;
     for (const folder of folderTable.folders) {
+      folder.nativeName = readStringRecord(stringTable, folder.stringOffset);
+      folder.nativeNameVerified = hashVerifiedPath(folder.nativeName, folder.hash);
       const knownName = dictionary[folder.hash];
-      folder.name = knownName && !path.isAbsolute(knownName) && !knownName.split(/[\\/]/).includes('..') ? knownName.replace(/\\/g, '/') : '';
+      const selectedName = folder.nativeNameVerified ? folder.nativeName : knownName;
+      folder.name = selectedName && !path.isAbsolute(selectedName) && !selectedName.split(/[\\/]/).includes('..') ? selectedName.replace(/\\/g, '/') : '';
       folder.nameResolved = Boolean(folder.name);
     }
     for (const file of fileTable.files) {
+      file.nativeLeaf = readStringRecord(stringTable, file.stringOffset);
+      const nativeFolder = folderTable.folders[file.folderIndex] && folderTable.folders[file.folderIndex].name || '';
+      file.nativeName = [nativeFolder, file.nativeLeaf].filter(Boolean).join('/');
+      file.nativeNameVerified = hashVerifiedPath(file.nativeName, file.hash);
       const knownName = dictionary[file.hash];
-      file.name = knownName && !path.isAbsolute(knownName) && !knownName.split(/[\\/]/).includes('..') ? knownName.replace(/\\/g, '/') : `Unresolved/${path.basename(resolved, path.extname(resolved))}/${safeGeneratedName(file)}`;
-      file.nameResolved = Boolean(knownName);
+      const selectedName = file.nativeNameVerified ? extractionPath(file.nativeName) : knownName;
+      file.name = selectedName && !path.isAbsolute(selectedName) && !selectedName.split(/[\\/]/).includes('..') ? selectedName.replace(/\\/g, '/') : `Unresolved/${path.basename(resolved, path.extname(resolved))}/${safeGeneratedFolder(file, folderTable.folders)}/${safeGeneratedName(file)}`;
+      file.nameResolved = Boolean(selectedName);
       file.folderName = folderTable.folders[file.folderIndex] && folderTable.folders[file.folderIndex].name || '';
       file.availability = file.extractable ? (file.nameResolved ? 'ready' : 'raw-hash') : 'external-reference';
     }
@@ -311,6 +376,16 @@ function openArchive(archivePath, dictionary = {}) {
       warnings: [fileTable.trailingBytes ? `${fileTable.trailingBytes} unused file-table bytes were preserved.` : '', folderTable.trailingBytes ? `${folderTable.trailingBytes} unused folder-table bytes were preserved.` : ''].filter(Boolean)
     };
   } finally { fs.closeSync(fd); }
+}
+
+function buildNativeDictionary(archivePaths) {
+  const dictionary = {};
+  for (const archivePath of archivePaths) {
+    const session = openArchive(archivePath, {});
+    for (const folder of session.folders) if (folder.nativeNameVerified) dictionary[folder.hash] = folder.nativeName;
+    for (const file of session.files) if (file.nativeNameVerified) dictionary[file.hash] = extractionPath(file.nativeName);
+  }
+  return dictionary;
 }
 
 function publicSummary(session) {
@@ -334,4 +409,4 @@ function searchFiles(session, options = {}) {
   return { items, total: filtered.length, page, pageSize, pages: Math.max(1, Math.ceil(filtered.length / pageSize)), types: [...new Set(session.files.map((file) => file.type).filter(Boolean))].sort() };
 }
 
-module.exports = { openArchive, publicSummary, searchFiles, buildNameCandidates, fnv1a64, decodePairs, keyFromFirstMask };
+module.exports = { openArchive, publicSummary, searchFiles, buildNameCandidates, buildNativeDictionary, fnv1a64, decodePairs, decodeStringTable, readStringRecord, keyFromFirstMask };

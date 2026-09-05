@@ -6,6 +6,7 @@ const { pathToFileURL } = require('url');
 const cakReader = require('./cak-reader');
 const cak20Reader = require('./cak20-reader');
 const archiveRepackager = require('./archive-repackager');
+const motion19Analyzer = require('../scripts/analyze-2k19-motion');
 const { createGameInstallRegistry } = require('./services/game-install-registry');
 const { createOperationJournal } = require('./services/operation-journal');
 const { createCapabilityRegistry } = require('./services/capability-registry');
@@ -735,7 +736,11 @@ ipcMain.handle('desktop:cak-explorer-choose-archive', async () => {
 
 ipcMain.handle('desktop:cak-explorer-open', async (_event, archivePath) => {
   const selected = path.resolve(String(archivePath || ''));
-  currentCakSession = cakReader.openArchive(selected, readCakDictionary());
+  const siblingArchives = fs.readdirSync(path.dirname(selected), { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^bakedfile\d+\.cak$/i.test(entry.name))
+    .map((entry) => path.join(path.dirname(selected), entry.name));
+  const dictionary = { ...readCakDictionary(), ...cakReader.buildNativeDictionary(siblingArchives) };
+  currentCakSession = cakReader.openArchive(selected, dictionary);
   return { ok: true, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'resolved' }) };
 });
 
@@ -743,11 +748,11 @@ ipcMain.handle('desktop:cak-explorer-open-all', async () => {
   const gameFolder = readToolConfig().gameFolder || '';
   if (!gameFolder || !fs.existsSync(gameFolder) || !fs.statSync(gameFolder).isDirectory()) throw new Error('Choose the WWE 2K26 game folder at the top of the extractor first.');
   const archivePaths = fs.readdirSync(gameFolder, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /\.cak$/i.test(entry.name))
+    .filter((entry) => entry.isFile() && /^bakedfile\d+\.cak$/i.test(entry.name))
     .map((entry) => path.join(gameFolder, entry.name))
     .sort((left, right) => path.basename(left).localeCompare(path.basename(right), undefined, { numeric: true }));
   if (!archivePaths.length) throw new Error('No .cak archives were found in the configured WWE 2K26 game folder.');
-  const dictionary = readCakDictionary();
+  const dictionary = { ...readCakDictionary(), ...cakReader.buildNativeDictionary(archivePaths) };
   const sessions = [];
   const rejectedArchives = [];
   for (const archivePath of archivePaths) {
@@ -802,10 +807,10 @@ ipcMain.handle('desktop:cak-explorer-choose-output', async () => {
   return { ok: true, path: selected };
 });
 
-ipcMain.handle('desktop:cak-explorer-extract', async (_event, payload) => {
+ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
   if (process.platform !== 'win32') throw new Error('Native CAK extraction is currently Windows-only because WWE 2K26 supplies a Windows Oodle library. Linux can still browse and search the archive catalog safely.');
   if (!currentCakSession) throw new Error('Open a CAK archive first.');
-  const ids = [...new Set(payload && payload.all ? currentCakSession.files.filter((file) => file && file.nameResolved && file.extractable !== false).map((file) => Number(file.id)) : (Array.isArray(payload && payload.ids) ? payload.ids.map(Number) : []))];
+  const ids = [...new Set(payload && payload.all ? currentCakSession.files.filter((file) => file && file.extractable !== false).map((file) => Number(file.id)) : (Array.isArray(payload && payload.ids) ? payload.ids.map(Number) : []))];
   if (!ids.length || (!(payload && payload.all) && ids.length > 5000)) throw new Error('Choose between 1 and 5,000 files per extraction job.');
   const outputRoot = path.resolve(String(payload && payload.outputRoot || ''));
   if (!fs.existsSync(outputRoot) || !fs.statSync(outputRoot).isDirectory()) throw new Error('Choose a valid extraction folder.');
@@ -814,6 +819,8 @@ ipcMain.handle('desktop:cak-explorer-extract', async (_event, payload) => {
   const files = ids.map((id) => currentCakSession.files[id]).filter(Boolean);
   if (files.length !== ids.length) throw new Error('One or more selected entries no longer exist. Reopen the archive.');
   if (files.some((file) => !file.extractable)) throw new Error('One or more selected catalog entries store their payload in another archive and cannot be extracted from this CAK alone.');
+  const unresolvedPayloads = files.filter((file) => !file.nameResolved);
+  if (payload && payload.all && unresolvedPayloads.length) throw new Error(`Extract All requires 100% real-name coverage. ${unresolvedPayloads.length.toLocaleString()} stored payload(s) still lack their genuine virtual paths, so nothing was extracted.`);
   const totalBytes = files.reduce((sum, file) => sum + file.expandedSize, 0);
   if (!(payload && payload.all) && totalBytes > 20 * 1024 * 1024 * 1024) throw new Error('This extraction job is larger than 20 GB. Choose a smaller group.');
   if (typeof fs.statfsSync === 'function') {
@@ -832,34 +839,65 @@ ipcMain.handle('desktop:cak-explorer-extract', async (_event, payload) => {
     groups.get(archivePath).push(file);
   }
   const results = [];
-  for (const [archivePath, archiveFiles] of groups) {
-    const request = {
-      archivePath,
-      oodlePath: resolveOodlePath(archivePath),
-      outputRoot,
-      archiveKey: archiveFiles[0].sourceArchiveKey === undefined ? currentCakSession.key : archiveFiles[0].sourceArchiveKey,
-      overwrite: Boolean(payload && payload.overwrite),
-      entries: archiveFiles.map((file) => ({ id: file.sourceId === undefined ? file.id : file.sourceId, offset: Number(file.offset), storedSize: file.storedSize, expandedSize: file.expandedSize, compressed: file.compressed, protected: file.protected, relativePath: file.name }))
-    };
-    const requestPath = path.join(app.getPath('temp'), `aurora-cak-${process.pid}-${Date.now()}-${results.length}.json`);
-    fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
-    try {
-      const run = await runNativeProcess(helper, [requestPath]);
-      let parsed;
-      try { parsed = JSON.parse(String(run.stdout || '').trim()); } catch (_error) { throw new Error((run.stderr || run.stdout || 'The extraction helper returned no readable report.').trim()); }
-      results.push(...(parsed.results || []).map((item) => ({ ok: Boolean(item.Ok), id: item.Id, archive: path.basename(archivePath), path: item.Path || '', bytes: item.Bytes || 0, error: item.Error || '' })));
-    } finally { try { fs.unlinkSync(requestPath); } catch (_error) {} }
+  const archiveGroups = [...groups.entries()];
+  const sendProgress = (details) => { if (!event.sender.isDestroyed()) event.sender.send('desktop:cak-extraction-progress', details); };
+  sendProgress({ phase: 'extracting', processed: 0, total: files.length, succeeded: 0, failed: 0, archiveIndex: 0, archiveCount: archiveGroups.length, archive: '' });
+  for (const [groupIndex, [archivePath, archiveFiles]] of archiveGroups.entries()) {
+    for (let start = 0; start < archiveFiles.length; start += 500) {
+      const batch = archiveFiles.slice(start, start + 500);
+      const request = {
+        archivePath,
+        oodlePath: resolveOodlePath(archivePath),
+        outputRoot,
+        archiveKey: batch[0].sourceArchiveKey === undefined ? currentCakSession.key : batch[0].sourceArchiveKey,
+        overwrite: Boolean(payload && payload.overwrite),
+        entries: batch.map((file) => ({ id: file.sourceId === undefined ? file.id : file.sourceId, offset: Number(file.offset), storedSize: file.storedSize, expandedSize: file.expandedSize, compressed: file.compressed, protected: file.protected, relativePath: file.name, chunks: file.chunks }))
+      };
+      const requestPath = path.join(app.getPath('temp'), `aurora-cak-${process.pid}-${Date.now()}-${results.length}.json`);
+      fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
+      try {
+        const run = await runNativeProcess(helper, [requestPath]);
+        let parsed;
+        try { parsed = JSON.parse(String(run.stdout || '').trim()); } catch (_error) { throw new Error((run.stderr || run.stdout || 'The extraction helper returned no readable report.').trim()); }
+        results.push(...(parsed.results || []).map((item) => ({ ok: Boolean(item.Ok), id: item.Id, archive: path.basename(archivePath), path: item.Path || '', bytes: item.Bytes || 0, error: item.Error || '' })));
+      } finally { try { fs.unlinkSync(requestPath); } catch (_error) {} }
+      sendProgress({ phase: 'extracting', processed: Math.min(results.length, files.length), total: files.length, succeeded: results.filter((item) => item.ok).length, failed: results.filter((item) => !item.ok).length, archiveIndex: groupIndex + 1, archiveCount: archiveGroups.length, archive: path.basename(archivePath) });
+    }
   }
     const succeeded = results.filter((item) => item.ok).length;
     lastCakOutputDir = outputRoot;
     const report = [
+      '**Readability note:** I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.', '',
       'Aurora Forge CAK Extraction Report', '',
       'Archive source: ' + currentCakSession.archivePath,
       'Output: ' + outputRoot,
       `Requested: ${files.length}`, `Succeeded: ${succeeded}`, `Failed: ${results.length - succeeded}`, '',
       ...results.map((item) => item.ok ? `OK  ${item.archive || currentCakSession.archiveName}  ${item.id}  ${item.bytes} bytes  ${item.path}` : `FAILED  ${item.archive || currentCakSession.archiveName}  ${item.id}  ${item.error}`)
     ].join('\n');
-    fs.writeFileSync(path.join(outputRoot, 'Aurora_Forge_Extraction_Report.txt'), report + '\n', 'utf8');
+    const reportPath = path.join(outputRoot, 'Aurora_Forge_Extraction_Report.txt');
+    if (fs.existsSync(reportPath)) fs.appendFileSync(reportPath, '\n' + report.split('\n').slice(2).join('\n') + '\n', 'utf8');
+    else fs.writeFileSync(reportPath, report + '\n', 'utf8');
+    const successfulKeys = new Set(results.filter((item) => item.ok).map((item) => `${String(item.archive || '').toLowerCase()}::${Number(item.id)}`));
+    const newManifestEntries = files.filter((file) => successfulKeys.has(`${path.basename(file.sourceArchivePath || currentCakSession.archivePath).toLowerCase()}::${Number(file.sourceId === undefined ? file.id : file.sourceId)}`)).map((file) => {
+      const folder = currentCakSession.folders[file.folderIndex];
+      return { relativePath: file.name, fileHash: file.hash, folderIndex: file.folderIndex, folderHash: folder && folder.hash || '', type: file.type, nameResolved: Boolean(file.nameResolved), sourceArchive: path.basename(file.sourceArchivePath || currentCakSession.archivePath) };
+    });
+    const extractionManifest = {
+      readabilityNote: 'I ran this document through an “explain like I am five” chatbot to improve readability, explainability, and usability. The chatbot helped present the material; it did not originate Aurora Forge, DataCtrlLink, their functionality, or the underlying development work.',
+      schema: 'aurora-forge-cak-extraction-manifest/v1',
+      purpose: 'Preserves original CAK file and folder hashes while presenting usable extracted names. Later archives win same-path collisions.',
+      entries: newManifestEntries
+    };
+    const extractionManifestPath = path.join(outputRoot, '.aurora-cak-manifest.json');
+    if (fs.existsSync(extractionManifestPath)) {
+      const existing = JSON.parse(fs.readFileSync(extractionManifestPath, 'utf8'));
+      if (existing.schema !== extractionManifest.schema || !Array.isArray(existing.entries)) throw new Error('The existing Aurora CAK extraction manifest is malformed or unsupported.');
+      const merged = new Map(existing.entries.map((entry) => [String(entry.relativePath || '').toLowerCase(), entry]));
+      for (const entry of newManifestEntries) merged.set(entry.relativePath.toLowerCase(), entry);
+      extractionManifest.entries = [...merged.values()];
+    }
+    fs.writeFileSync(extractionManifestPath, JSON.stringify(extractionManifest, null, 2) + '\n', 'utf8');
+    sendProgress({ phase: 'complete', processed: results.length, total: files.length, succeeded, failed: results.length - succeeded, archiveIndex: archiveGroups.length, archiveCount: archiveGroups.length, archive: '' });
     return { ok: succeeded === results.length, succeeded, failed: results.length - succeeded, total: results.length, outputRoot, results };
 });
 
@@ -948,6 +986,26 @@ ipcMain.handle('desktop:pac19-replace', async (_event, payload) => {
   const response = await runPac19Helper({ action: 'replace', archivePath: currentPac19Archive, oodlePath: pac19OodlePath(currentPac19Archive), entryId: payload?.entryId, replacementPath: payload?.replacementPath, outputPath });
   lastPac19OutputDir = path.dirname(outputPath);
   return response;
+});
+
+ipcMain.handle('desktop:pac19-analyze-motion', async () => {
+  const selected = await dialog.showOpenDialog({
+    title: 'Choose a folder containing decoded WWE 2K19 motion files',
+    defaultPath: lastPac19OutputDir || app.getPath('documents'),
+    properties: ['openDirectory']
+  });
+  if (selected.canceled || !selected.filePaths[0]) return { ok: false };
+  const inputPath = path.resolve(selected.filePaths[0]);
+  const report = motion19Analyzer.analyzeTarget(inputPath);
+  const destination = await dialog.showSaveDialog({
+    title: 'Save the read-only motion analysis report',
+    defaultPath: path.join(inputPath, 'Aurora_Forge_WWE2K19_Motion_Analysis.json'),
+    filters: [{ name: 'JSON report', extensions: ['json'] }]
+  });
+  if (destination.canceled || !destination.filePath) return { ok: false };
+  const outputPath = destination.filePath.toLowerCase().endsWith('.json') ? destination.filePath : destination.filePath + '.json';
+  fs.writeFileSync(outputPath, JSON.stringify(report, null, 2) + '\n', 'utf8');
+  return { ok: true, outputPath, accepted: report.accepted, rejected: report.rejected };
 });
 
 ipcMain.handle('desktop:cak20-status', async () => {

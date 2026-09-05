@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,searchCakArchive: (options) => ipcRenderer.invoke('desktop:cak-explorer-search', options)
   ,chooseCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-choose-output')
    ,extractCakEntries: (payload) => ipcRenderer.invoke('desktop:cak-explorer-extract', payload)
+  ,onCakExtractionProgress: (callback) => { const listener = (_event, payload) => callback(payload); ipcRenderer.on('desktop:cak-extraction-progress', listener); return () => ipcRenderer.removeListener('desktop:cak-extraction-progress', listener); }
   ,openCakOutput: () => ipcRenderer.invoke('desktop:cak-explorer-open-output')
   ,chooseRepackSource: () => ipcRenderer.invoke('desktop:repackager-choose-source')
   ,buildRepackPackage: (sourceRoot) => ipcRenderer.invoke('desktop:repackager-build', sourceRoot)
@@ -46,6 +47,7 @@ contextBridge.exposeInMainWorld('WWE2K26Desktop', {
   ,openPac19Output: () => ipcRenderer.invoke('desktop:pac19-open-output')
   ,choosePac19Replacement: () => ipcRenderer.invoke('desktop:pac19-choose-replacement')
   ,replacePac19Entry: (payload) => ipcRenderer.invoke('desktop:pac19-replace', payload)
+  ,analyzePac19Motion: () => ipcRenderer.invoke('desktop:pac19-analyze-motion')
   ,getCak20Status: () => ipcRenderer.invoke('desktop:cak20-status')
   ,chooseCak20GameFolder: () => ipcRenderer.invoke('desktop:cak20-choose-game-folder')
   ,listCak20Files: (options) => ipcRenderer.invoke('desktop:cak20-list-files', options)
