@@ -4,6 +4,7 @@ const fs = require('fs');
 const cp = require('child_process');
 const { pathToFileURL } = require('url');
 const cakReader = require('./cak-reader');
+const cakV93 = require('./cak-v93-backend');
 const cak20Reader = require('./cak20-reader');
 const archiveRepackager = require('./archive-repackager');
 const motion19Analyzer = require('../scripts/analyze-2k19-motion');
@@ -30,6 +31,7 @@ const DEFAULT_EXPORTS_DIR_NAME = 'Aurora Forge Exports';
 let lastDdsConverterOutputDir = '';
 let lastBuiltCakPath = '';
 let lastBuiltCakSource = '';
+let lastBuiltCakProfile = '';
 let currentCakSession = null;
 let lastCakOutputDir = '';
 let currentPac19Archive = '';
@@ -242,6 +244,16 @@ function bundledToolPath(...parts) {
 
 function cakHelperPath() {
   return bundledToolPath('cak-helper', 'AuroraCakHelper.exe');
+}
+
+function cakV93ToolPath() {
+  return bundledToolPath('cak-v93', 'CakeTool.exe');
+}
+
+function openSupportedCak(archivePath, dictionary = {}) {
+  return cakV93.isV93Archive(archivePath)
+    ? cakV93.openArchive(archivePath, cakV93ToolPath())
+    : cakReader.openArchive(archivePath, dictionary);
 }
 
 function pac19HelperPath() {
@@ -719,13 +731,14 @@ ipcMain.handle('desktop:cak-explorer-status', async () => {
       .map((entry) => ({ name: entry.name, path: path.join(gameFolder, entry.name), bytes: fs.statSync(path.join(gameFolder, entry.name)).size }))
       .sort((left, right) => left.name.localeCompare(right.name, undefined, { numeric: true }));
   }
-  return { ready: process.platform === 'win32' && fs.existsSync(helper), extractionSupported: process.platform === 'win32', platform: process.platform, gameFolder, oodle, archives, dictionaryEntries: Object.keys(readCakDictionary()).length };
+  const detectedGame = gameFolder && fs.existsSync(path.join(gameFolder, 'WWE2K25_x64.exe')) ? 'WWE 2K25' : (gameFolder && fs.existsSync(path.join(gameFolder, 'WWE2K26_x64.exe')) ? 'WWE 2K26' : 'WWE game');
+  return { ready: process.platform === 'win32' && fs.existsSync(helper) && fs.existsSync(cakV93ToolPath()), extractionSupported: process.platform === 'win32', platform: process.platform, gameFolder, detectedGame, oodle, archives, dictionaryEntries: Object.keys(readCakDictionary()).length };
 });
 
 ipcMain.handle('desktop:cak-explorer-choose-archive', async () => {
   const config = readToolConfig();
   const result = await dialog.showOpenDialog({
-    title: 'Choose a WWE 2K26 CAK archive',
+    title: 'Choose a WWE 2K25 or WWE 2K26 CAK archive',
     defaultPath: config.gameFolder || undefined,
     properties: ['openFile'],
     filters: [{ name: 'WWE 2K archives', extensions: ['cak'] }]
@@ -736,11 +749,15 @@ ipcMain.handle('desktop:cak-explorer-choose-archive', async () => {
 
 ipcMain.handle('desktop:cak-explorer-open', async (_event, archivePath) => {
   const selected = path.resolve(String(archivePath || ''));
+  if (cakV93.isV93Archive(selected)) {
+    currentCakSession = openSupportedCak(selected);
+    return { ok: true, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'resolved' }) };
+  }
   const siblingArchives = fs.readdirSync(path.dirname(selected), { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^bakedfile\d+\.cak$/i.test(entry.name))
     .map((entry) => path.join(path.dirname(selected), entry.name));
   const dictionary = { ...readCakDictionary(), ...cakReader.buildNativeDictionary(siblingArchives) };
-  currentCakSession = cakReader.openArchive(selected, dictionary);
+  currentCakSession = openSupportedCak(selected, dictionary);
   return { ok: true, summary: cakReader.publicSummary(currentCakSession), results: cakReader.searchFiles(currentCakSession, { scope: 'resolved' }) };
 });
 
@@ -752,11 +769,12 @@ ipcMain.handle('desktop:cak-explorer-open-all', async () => {
     .map((entry) => path.join(gameFolder, entry.name))
     .sort((left, right) => path.basename(left).localeCompare(path.basename(right), undefined, { numeric: true }));
   if (!archivePaths.length) throw new Error('No .cak archives were found in the configured WWE 2K26 game folder.');
-  const dictionary = { ...readCakDictionary(), ...cakReader.buildNativeDictionary(archivePaths) };
+  const v99ArchivePaths = archivePaths.filter((archivePath) => !cakV93.isV93Archive(archivePath));
+  const dictionary = { ...readCakDictionary(), ...(v99ArchivePaths.length ? cakReader.buildNativeDictionary(v99ArchivePaths) : {}) };
   const sessions = [];
   const rejectedArchives = [];
   for (const archivePath of archivePaths) {
-    try { sessions.push(cakReader.openArchive(archivePath, dictionary)); }
+    try { sessions.push(openSupportedCak(archivePath, dictionary)); }
     catch (error) { rejectedArchives.push({ archive: path.basename(archivePath), error: error.message }); }
   }
   if (!sessions.length) throw new Error('Every CAK archive was rejected by the safety checks. No archive was opened.');
@@ -843,6 +861,30 @@ ipcMain.handle('desktop:cak-explorer-extract', async (event, payload) => {
   const sendProgress = (details) => { if (!event.sender.isDestroyed()) event.sender.send('desktop:cak-extraction-progress', details); };
   sendProgress({ phase: 'extracting', processed: 0, total: files.length, succeeded: 0, failed: 0, archiveIndex: 0, archiveCount: archiveGroups.length, archive: '' });
   for (const [groupIndex, [archivePath, archiveFiles]] of archiveGroups.entries()) {
+    const v93 = cakV93.isV93Archive(archivePath);
+    if (v93) {
+      const oodleForArchive = resolveOodlePath(archivePath);
+      if (!oodleForArchive) throw new Error('oo2core_9_win64.dll was not found beside the selected WWE 2K25 installation.');
+      if (payload && payload.all && archiveFiles.length === currentCakSession.files.filter((file) => (file.sourceArchivePath || currentCakSession.archivePath) === archivePath && file.extractable !== false).length) {
+        cakV93.extractAll(archivePath, outputRoot, cakV93ToolPath(), oodleForArchive);
+        for (const file of archiveFiles) {
+          const target = path.join(outputRoot, ...file.name.split('/'));
+          results.push(fs.existsSync(target)
+            ? { ok: true, id: file.sourceId === undefined ? file.id : file.sourceId, archive: path.basename(archivePath), path: target, bytes: fs.statSync(target).size, error: '' }
+            : { ok: false, id: file.sourceId === undefined ? file.id : file.sourceId, archive: path.basename(archivePath), path: '', bytes: 0, error: 'The backend did not produce the catalogued file.' });
+        }
+      } else {
+        for (const file of archiveFiles) {
+          try {
+            cakV93.extractFile(archivePath, file.name, outputRoot, cakV93ToolPath(), oodleForArchive);
+            const target = path.join(outputRoot, ...file.name.split('/'));
+            results.push({ ok: fs.existsSync(target), id: file.sourceId === undefined ? file.id : file.sourceId, archive: path.basename(archivePath), path: target, bytes: fs.existsSync(target) ? fs.statSync(target).size : 0, error: fs.existsSync(target) ? '' : 'The backend did not produce the catalogued file.' });
+          } catch (error) { results.push({ ok: false, id: file.id, archive: path.basename(archivePath), path: '', bytes: 0, error: error.message }); }
+        }
+      }
+      sendProgress({ phase: 'extracting', processed: Math.min(results.length, files.length), total: files.length, succeeded: results.filter((item) => item.ok).length, failed: results.filter((item) => !item.ok).length, archiveIndex: groupIndex + 1, archiveCount: archiveGroups.length, archive: path.basename(archivePath) });
+      continue;
+    }
     for (let start = 0; start < archiveFiles.length; start += 500) {
       const batch = archiveFiles.slice(start, start + 500);
       const request = {
@@ -1157,10 +1199,21 @@ ipcMain.handle('desktop:repackager-choose-source', async () => {
 ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
   const source = path.resolve(String(sourceRoot || ''));
   if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) throw new Error('Choose a readable BakeMe folder first.');
-  const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
+  const gameFolder = readToolConfig().gameFolder || '';
+  const isWwe2K25 = Boolean(gameFolder && fs.existsSync(path.join(gameFolder, 'WWE2K25_x64.exe')));
+  const result = await dialog.showSaveDialog({ title: 'Save the new CAK archive', defaultPath: path.basename(source).replace(/^bakeme(?:_|-)?/i, '') || 'AuroraForge-Mod', filters: [{ name: isWwe2K25 ? 'WWE 2K25 CAK archive' : 'WWE 2K26 CAK archive', extensions: ['cak'] }] });
   if (result.canceled || !result.filePath) return { ok: false };
-  const built = archiveRepackager.buildCak(source, result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak', { oodlePath: resolveOodlePath(), helperPath: cakHelperPath() });
-  lastBuiltCakPath = built.outputPath;
+  const outputPath = result.filePath.endsWith('.cak') ? result.filePath : result.filePath + '.cak';
+  let built;
+  if (isWwe2K25) {
+    cakV93.buildCak(source, outputPath, cakV93ToolPath(), resolveOodlePath());
+    built = { outputPath, sourceRoot: source, warnings: ['WWE 2K25 rebuilding is Experimental until the rebuilt archive is confirmed in-game.'], ...cakV93.verifyCak(outputPath, source, cakV93ToolPath(), resolveOodlePath()) };
+    lastBuiltCakProfile = 'v93';
+  } else {
+    built = archiveRepackager.buildCak(source, outputPath, { oodlePath: resolveOodlePath(), helperPath: cakHelperPath() });
+    lastBuiltCakProfile = 'v99';
+  }
+  lastBuiltCakPath = outputPath;
   lastBuiltCakSource = source;
   return { ok: true, ...built };
 });
@@ -1168,6 +1221,7 @@ ipcMain.handle('desktop:repackager-build', async (_event, sourceRoot) => {
 ipcMain.handle('desktop:repackager-verify', async () => {
   if (!lastBuiltCakPath || !fs.existsSync(lastBuiltCakPath)) throw new Error('Build a new CAK first.');
   if (!lastBuiltCakSource || !fs.existsSync(lastBuiltCakSource)) throw new Error('The BakeMe source folder is no longer available for byte-for-byte verification.');
+  if (lastBuiltCakProfile === 'v93') return { ok: true, ...cakV93.verifyCak(lastBuiltCakPath, lastBuiltCakSource, cakV93ToolPath(), resolveOodlePath()), outputPath: lastBuiltCakPath };
   const expected = archiveRepackager.prepareScanPayloads(archiveRepackager.scanBakeFolder(lastBuiltCakSource), { oodlePath: resolveOodlePath(), helperPath: cakHelperPath() });
   return { ok: true, ...archiveRepackager.verifyCak(lastBuiltCakPath, expected), outputPath: lastBuiltCakPath };
 });

@@ -12,6 +12,8 @@
     "verify:cak": "node scripts/verify-cak-extraction.js",
     "verify:repack": "node scripts/verify-repackager.js",
     "build:cak-helper": "node scripts/build-cak-helper.js",
+    "build:cak-v93": "node scripts/build-cak-v93-backend.js",
+    "verify:cak-v93": "node scripts/verify-cak-v93.js",
     "build:pac19-helper": "node scripts/build-pac19-helper.js",
     "verify:pac19": "node scripts/verify-pac19-helper.js",
     "verify:cak20": "node scripts/verify-cak20-reader.js",

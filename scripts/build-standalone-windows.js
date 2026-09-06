@@ -11,7 +11,7 @@ const release = path.join(root, 'portable-release');
 const packager = path.join(root, 'node_modules', '.bin', process.platform === 'win32' ? 'electron-packager.cmd' : 'electron-packager');
 const version = '1.7.5';
 const variants = [
-  { id: 'cak', product: 'Aurora CAK Foundry', version: '1.7.6c', runtimeVersion: '1.7.6', releaseNotes: 'CAK_FOUNDRY_RELEASE_NOTES_1.7.6c.md', bugReport: 'AURORA_CAK_FOUNDRY_v1.7.6c_BUG_REPORT.md', fixReport: 'AURORA_CAK_FOUNDRY_v1.7.6c_FIX_REPORT.md', main: 'electron/standalone-cak-main.js', page: 'cak-explorer.html', script: 'cak-explorer.js', data: true, tool: 'cak-helper', zip: 'Aurora-CAK-Foundry-v1.7.6c-Windows-x64.zip' },
+  { id: 'cak', product: 'Aurora CAK Foundry', version: '1.7.7', runtimeVersion: '1.7.7', releaseNotes: 'CAK_FOUNDRY_RELEASE_NOTES_1.7.7.md', bugReport: 'AURORA_CAK_FOUNDRY_v1.7.7_BUG_REPORT.md', fixReport: 'AURORA_CAK_FOUNDRY_v1.7.7_FIX_REPORT.md', main: 'electron/standalone-cak-main.js', page: 'cak-explorer.html', script: 'cak-explorer.js', data: true, tool: 'cak-helper', helperScript: 'build:cak-v93', zip: 'Aurora-CAK-Foundry-v1.7.7-Windows-x64.zip' },
   { id: 'dds', product: 'Aurora Forge DDS Converter', version: '1.7.5a', runtimeVersion: '1.7.5', main: 'electron/standalone-dds-main.js', page: 'dds-converter.html', script: 'dds-converter.js', tool: 'texconv', zip: 'Aurora-Forge-DDS-Converter-v1.7.5a-Windows-x64.zip' },
   { id: 'pac19', product: 'Aurora Forge WWE 2K19 Project', version: '0.1.01a', runtimeVersion: '0.1.1', channel: 'Research Preview', main: 'electron/standalone-pac19-main.js', page: 'pac19-explorer.html', script: 'pac19-explorer.js', tool: 'pac19-helper', helperScript: 'build:pac19-helper', supportScripts: ['analyze-2k19-motion.js'], zip: 'Aurora-Forge-WWE2K19-Project-v0.1.01a-Research-Preview-Windows-x64.zip' },
   { id: 'cak20', product: 'Aurora Forge WWE 2K20 CAK Workbench', version: '1.7.5a', runtimeVersion: '1.7.5', main: 'electron/standalone-cak20-main.js', page: 'cak20-explorer.html', script: 'cak20-explorer.js', zip: 'Aurora-Forge-WWE2K20-CAK-Workbench-v1.7.5a-Windows-x64.zip' }
@@ -73,6 +73,7 @@ function createStandaloneStaging(variant) {
   }
   if (variant.tool) copyDir(path.join(runtime, 'app', 'tools', variant.tool), path.join(target, 'app', 'tools', variant.tool));
   if (variant.id === 'cak') {
+    copyDir(path.join(runtime, 'app', 'tools', 'cak-v93'), path.join(target, 'app', 'tools', 'cak-v93'));
     const texconvSrc = path.join(runtime, 'app', 'tools', 'texconv');
     const texconvDst = path.join(target, 'app', 'tools', 'texconv');
     if (fs.existsSync(texconvSrc)) copyDir(texconvSrc, texconvDst);
@@ -86,6 +87,9 @@ function createStandaloneStaging(variant) {
     fs.mkdirSync(tpnDirDst, { recursive: true });
     const dxLicenseSrc = path.join(runtime, 'app', 'tools', 'texconv', 'LICENSE.txt');
     if (fs.existsSync(dxLicenseSrc)) fs.copyFileSync(dxLicenseSrc, path.join(tpnDirDst, 'DirectXTex-LICENSE.txt'));
+    fs.copyFileSync(path.join(runtime, 'app', 'tools', 'cak-v93', 'NENKAI-BAKERY-MIT-LICENSE.txt'), path.join(tpnDirDst, 'Nenkai-Bakery-MIT-LICENSE.txt'));
+    fs.copyFileSync(path.join(runtime, 'app', 'tools', 'cak-v93', 'CRUNCH2-LICENSE.txt'), path.join(tpnDirDst, 'Crunch2-LICENSE.txt'));
+    fs.copyFileSync(path.join(runtime, 'app', 'tools', 'cak-v93', 'AURORA-INTEGRATION-NOTICE.md'), path.join(tpnDirDst, 'Nenkai-Bakery-Aurora-Integration-Notice.md'));
   }
   if (variant.supportScripts) {
     for (const script of variant.supportScripts) {
@@ -177,6 +181,9 @@ for (const variant of selectedVariants) {
     fs.mkdirSync(tpnDirDst, { recursive: true });
     const dxLicenseSrc = path.join(runtime, 'app', 'tools', 'texconv', 'LICENSE.txt');
     if (fs.existsSync(dxLicenseSrc)) fs.copyFileSync(dxLicenseSrc, path.join(tpnDirDst, 'DirectXTex-LICENSE.txt'));
+    fs.copyFileSync(path.join(runtime, 'app', 'tools', 'cak-v93', 'NENKAI-BAKERY-MIT-LICENSE.txt'), path.join(tpnDirDst, 'Nenkai-Bakery-MIT-LICENSE.txt'));
+    fs.copyFileSync(path.join(runtime, 'app', 'tools', 'cak-v93', 'CRUNCH2-LICENSE.txt'), path.join(tpnDirDst, 'Crunch2-LICENSE.txt'));
+    fs.copyFileSync(path.join(runtime, 'app', 'tools', 'cak-v93', 'AURORA-INTEGRATION-NOTICE.md'), path.join(tpnDirDst, 'Nenkai-Bakery-Aurora-Integration-Notice.md'));
   }
   const destination = path.join(release, variant.zip);
   if (fs.existsSync(destination)) fs.rmSync(destination, { force: true });

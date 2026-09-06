@@ -114,7 +114,7 @@
       byId('cakReadyBadge').classList.toggle('ready', ready);
       byId('cakReadyText').textContent = status.extractionSupported === false
         ? 'Linux supports safe CAK catalog browsing and search. Extraction remains Windows-only because the game provides a Windows Oodle library.'
-        : (ready ? `${status.archives.length} archive(s) found. The game decompressor is ready.` : 'Choose your WWE 2K26 game folder below so the extractor can find the archives and Oodle.');
+        : (ready ? `${status.archives.length} ${status.detectedGame || 'WWE'} archive(s) found. The game decompressor is ready.` : 'Choose your WWE 2K25 or WWE 2K26 game folder below so the extractor can find the archives and Oodle.');
       if (status.extractionSupported === false) byId('cakExtractAllArchives').disabled = true;
       const select = byId('cakArchiveSelect');
       select.replaceChildren(new Option('Choose an archive...', ''));
