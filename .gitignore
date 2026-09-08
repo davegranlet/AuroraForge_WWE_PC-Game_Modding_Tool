@@ -1,11 +1,16 @@
 node_modules/
 tools/**/bin/
 tools/**/obj/
+third_party/**/bin/
+third_party/**/obj/
+app/tools/cak-v93/
 build/
 dist/
 portable-release/
 build-logs/
 _research/
+tools/**/pac-request.json
+*.pdb
 *.log
 .DS_Store
 Thumbs.db
